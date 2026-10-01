@@ -31,6 +31,15 @@ describe("name", () => {
   });
 });
 
+describe("options", () => {
+  it("give each option a unique key within its model, so persisted values identify one switch", () => {
+    for (const model of registeredModels) {
+      const keys = model.options.map((option) => option.key);
+      expect(new Set(keys).size, model.info.label).toBe(keys.length);
+    }
+  });
+});
+
 describe("standard", () => {
   it("is one of the editions the model's library function accepts, for every registered model", () => {
     for (const model of registeredModels) {
