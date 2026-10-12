@@ -31,7 +31,12 @@ Whether the code meets the project's own requirements is checked by the tests on
 
 Some differences are deliberate. For example, ADR-0002 decision 54 has the PMV (ISO 7730) page correct the clothing insulation at every metabolic rate, which the deployed tool does not.
 
-- `tests/parity/known-divergences.json` lists each deliberate difference: the model, the quantity, the cases it covers, and the ADR decision that explains it.
+- `tests/parity/known-divergences.json` lists each deliberate difference. An entry names:
+  - `page`: the page's address.
+  - `results`: the result rows that differ, by the names the result table shows.
+  - `cases`: `"all"`, or a list of inputs in the fixture's form.
+  - `decision`: the ADR decision that explains the difference.
+  - `reason`: the explanation in a sentence or two.
 - A test fails only on a difference that file does not list.
 - Only the maintainer adds an entry, because an entry records a decision. If you find a difference that is not listed, report it in your PR with the inputs and both values.
 
