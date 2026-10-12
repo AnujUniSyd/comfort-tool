@@ -1,13 +1,13 @@
 # Parity tests
 
-This directory checks one thing: where the app's results differ from the deployed CBE Thermal Comfort Tool's. It lives only on the `test-suite` branch.
+This directory checks one thing: where what the app shows differs from the deployed CBE Thermal Comfort Tool. That covers its results and, as the page states them, its inputs' defaults, ranges and handling of an out-of-range entry. It lives only on the `test-suite` branch.
 
 Whether the code meets the project's own requirements is checked by the tests on `rewrite/v1`, which the maintainer writes. Those are not in scope here.
 
 ## Branches
 
 - Branch from `test-suite`, and open your PR against `test-suite`.
-- The maintainer merges `rewrite/v1` into `test-suite` from time to time. To pick it up, merge `test-suite` into your branch. Do not rebase a branch someone else has pulled.
+- The maintainer merges `rewrite/v1` into `test-suite` in batches: about once a week, and after a change that moves results or page structure. Each sync is announced in [the acceptance issue](https://github.com/FedericoTartarini/comfort-tool/issues/30), with the `rewrite/v1` commit, the tests it turned red and the entries of `known-divergences.json` it added or removed. To pick it up, merge `test-suite` into your branch. Do not rebase a branch someone else has pulled.
 - `test-suite` is never merged into `rewrite/v1`.
 - Add files under `tests/parity/` only. Do not edit any other file, `package.json` and the root `playwright.config.ts` included. Then a sync from `rewrite/v1` never conflicts with your work.
 
@@ -33,12 +33,14 @@ Some differences are deliberate. For example, ADR-0002 decision 54 has the PMV (
 
 - `tests/parity/known-divergences.json` lists each deliberate difference. An entry names:
   - `page`: the page's address.
-  - `results`: the result rows that differ, by the names the result table shows.
+  - `subjects`: what differs, by the names the page shows: result rows by the result table's names, inputs by their field labels.
+  - `aspect`: which side of them differs: `"value"` for a result, or `"default"`, `"range"` or `"out-of-range"` for an input.
   - `cases`: `"all"`, or a list of inputs in the fixture's form.
   - `decision`: the ADR decision that explains the difference.
   - `reason`: the explanation in a sentence or two.
-- A test fails only on a difference that file does not list.
-- Only the maintainer adds an entry, because an entry records a decision. If you find a difference that is not listed, report it in your PR with the inputs and both values.
+- A test fails on a difference that file does not list.
+- The list is strict: a test also fails on an entry that no longer holds, that is, when none of the cases it covers differs any more. The app has changed to agree with the deployed tool, and the entry has to go.
+- Only the maintainer adds or removes an entry, because an entry records a decision. If you find a difference that is not listed, report it in your PR and in [the acceptance issue](https://github.com/FedericoTartarini/comfort-tool/issues/30), with the inputs and both values.
 
 ## Running
 
@@ -53,6 +55,7 @@ npm run lint
 ## When a test fails after a sync
 
 - **A new difference:** the app changed what it computes. Report it; the maintainer decides whether the app changes or the difference is listed.
+- **An entry that no longer holds:** the app now agrees with the deployed tool. The maintainer removes the entry and marks the row fixed in [the acceptance issue](https://github.com/FedericoTartarini/comfort-tool/issues/30).
 - **A test that no longer finds its field or row:** the page changed. Fix the locator in a PR.
 
 ## A PR

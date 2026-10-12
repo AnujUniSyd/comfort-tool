@@ -1,9 +1,10 @@
 {
-  "description": "Deliberate differences between the app and the deployed CBE tool. A parity test passes a difference listed here and fails on any other. Only the maintainer adds an entry. See README.md.",
+  "description": "Deliberate differences between the app and the deployed CBE tool. A parity test passes a difference listed here, fails on any other, and fails on an entry that no longer holds. Only the maintainer adds or removes an entry. See README.md.",
   "divergences": [
     {
       "page": "/standard/iso-7730/pmv-ppd-iso",
-      "results": ["Predicted Mean Vote", "Predicted Percentage of Dissatisfied"],
+      "subjects": ["Predicted Mean Vote", "Predicted Percentage of Dissatisfied"],
+      "aspect": "value",
       "cases": "all",
       "decision": "ADR-0002 decision 54",
       "reason": "The app corrects the clothing insulation by ISO 7730's rule at every metabolic rate; the deployed tool does not correct it. At the page's defaults the app shows a PMV of -0.41 where the deployed tool shows -0.24."
