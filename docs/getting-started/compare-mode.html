@@ -327,12 +327,12 @@
       <h4>Models</h4>
       <ul>
         <li><a class="" href="../models/pmv-ashrae-55.html">PMV (ASHRAE 55)</a></li>
-        <li><a href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
         <li><a href="../models/adaptive-ashrae-55.html">Adaptive (ASHRAE 55)</a></li>
+        <li><a href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
+        <li><a href="../models/heat-index.html">Heat Index</a></li>
         <li><a href="../models/adaptive-en-16798-1.html">Adaptive (EN 16798-1)</a></li>
         <li><a href="../models/phs.html">PHS (ISO 7933:2023)</a></li>
         <li><a href="../models/utci.html">UTCI</a></li>
-        <li><a href="../models/heat-index.html">Heat Index</a></li>
         <li><a href="../models/humidex.html">Humidex</a></li>
         <li><a href="../models/wind-chill.html">Wind Chill</a></li>
       </ul>
@@ -348,6 +348,7 @@
       <ul>
         <li><a href="../reference/references.html">References and citations</a></li>
         <li><a href="../reference/thermal-comfort-questions.html">Thermal comfort questions</a></li>
+        <li><a href="../reference/glossary.html">Glossary</a></li>
       </ul>
       <h4>Site pages</h4>
       <ul>
@@ -360,6 +361,7 @@
       <div class="crumb">Getting started</div>
 
       <h1>Compare mode</h1>
+      <div class="warn"><strong>Differs in v1.</strong> The sections marked below describe the archived interface. In <code>rewrite/v1</code> there is <em>no baseline and no active slot</em>: every compared slot draws its own comfort zones, nested, and its own marker, so no slot is a reference for the others. Compare is a switch in the Inputs heading row of the Standard page. Slot 1 is always compared; slots 2 and 3 are each enabled by the person, and a slot that has never been enabled takes what slot 1 holds. An entry mode belongs to the session and converts every slot, which is what lets three columns share a row. Verified against <code>rewrite/v1</code> at <code>4d6f6df</code>.</div>
 
       <h2>Overview</h2>
       <p>Compare mode evaluates up to three sets of inputs at the same time, so you can put two design options, two
@@ -390,10 +392,12 @@
         meaningful the moment you turn it on and you can see at a glance which column is which.</p>
 
       <h3>Per-input visibility</h3>
+      <div class="warn"><strong>Differs in v1.</strong> Slots 2 and 3 are enabled rather than hidden, and a slot that has never been enabled holds nothing until it is, when it takes what slot 1 holds. Slot 1 cannot be disabled.</div>
       <p>Hiding an input removes it from the result table and the chart but keeps its values, so you can bring it back
         without retyping. Hiding the set you are currently editing moves the focus to the next visible one.</p>
 
       <h3>The chart baseline picker</h3>
+      <div class="warn"><strong>Not in v1.</strong> There is no baseline picker. Every compared slot draws its own comfort zones as nested fills, so the zones a point is read against are always that point's own.</div>
       <p>Charts that draw a zone or a field can only draw one at a time a comfort zone depends on clothing, metabolic
         rate and air speed, so three input sets imply three different zones. The <strong>baseline</strong> picker above
         the chart chooses which set the drawn region belongs to.</p>
@@ -422,12 +426,14 @@
         turning it back on restores them.</p>
 
       <h3>What is shared and what is not</h3>
+      <div class="warn"><strong>Differs in v1.</strong> The entry modes and the atmospheric pressure belong to the session too, not to a slot. Input calculators are not per-slot state: a calculator computes a value once and writes it to the slots chosen for it on Apply, and its own inputs are kept nowhere.</div>
       <p>The unit system, the selected model and the chart settings are properties of the workspace, not of an
         individual input set all three sets are evaluated in the same units with the same model. Everything in the input
         fields, including the input modifiers, belongs to the individual set, so Input 1 can have solar gain enabled
         while Input 2 does not.</p>
 
       <h3>Compare and sharing</h3>
+      <div class="warn"><strong>Differs in v1.</strong> A share link carries no active slot and no chart baseline, and never a result.</div>
       <p>A share link carries the whole comparison: which sets are visible, their values, the active set and the chart
         baseline. A recipient opens the same three-way comparison you built. See <a href="sharing.html">Sharing a
           calculation</a>.</p>

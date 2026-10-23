@@ -347,12 +347,12 @@
       <h4>Models</h4>
       <ul>
         <li><a class="" href="../models/pmv-ashrae-55.html">PMV (ASHRAE 55)</a></li>
-        <li><a class="on" href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
         <li><a class="" href="../models/adaptive-ashrae-55.html">Adaptive (ASHRAE 55)</a></li>
+        <li><a class="on" href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
+        <li><a class="" href="../models/heat-index.html">Heat Index</a></li>
         <li><a class="" href="../models/adaptive-en-16798-1.html">Adaptive (EN 16798-1)</a></li>
         <li><a class="" href="../models/phs.html">PHS (ISO 7933:2023)</a></li>
         <li><a class="" href="../models/utci.html">UTCI</a></li>
-        <li><a class="" href="../models/heat-index.html">Heat Index</a></li>
         <li><a class="" href="../models/humidex.html">Humidex</a></li>
         <li><a class="" href="../models/wind-chill.html">Wind Chill</a></li>
       </ul>
@@ -368,6 +368,7 @@
       <ul>
         <li><a href="../reference/references.html">References and citations</a></li>
         <li><a href="../reference/thermal-comfort-questions.html">Thermal comfort questions</a></li>
+        <li><a href="../reference/glossary.html">Glossary</a></li>
       </ul>
       <h4>Site pages</h4>
       <ul>
@@ -379,8 +380,8 @@
     <main>
       <div class="crumb">Models</div>
 
-      <h1>PMV / PPD (ISO 7730, Category B)</h1>
-      <p><span class="pill">pmv-iso</span><span class="pill">ISO 7730 workspace</span><span class="pill">Explore</span>
+      <h1>PMV / PPD (ISO 7730)</h1>
+      <p><span class="pill">pmv-ppd-iso</span><span class="pill">ISO 7730:2025</span><span class="pill">Standard page</span><span class="pill">Explore</span>
       </p>
       <p>The same Fanger heat-balance model described on the <a href="pmv-ashrae-55.html">ASHRAE 55 page</a>, evaluated
         under ISO 7730. The equations agree; what differs is the applicability range, how the result is banded, and
@@ -389,6 +390,7 @@
         temperature, air speed and humidity and two describe the person: metabolic rate and clothing insulation.</p>
       <p>PMV uses all six, and the descriptions of each factor on the ASHRAE page apply here unchanged. This page covers
         what is specific to the ISO treatment.</p>
+      <div class="note">In <code>rewrite/v1</code> this model declares ISO 7730:2025, is reached at <code>/standard/iso-7730/pmv-ppd-iso</code> and from Explore, and defaults to 25&nbsp;&deg;C air and radiant temperature, 0.1&nbsp;m/s air speed, 50&nbsp;&percnt; relative humidity, 1.1&nbsp;met and 0.5&nbsp;clo. Its result table shows PMV and PPD only, with no compliance column. Its comfort zones are ISO categories A, B and C, nested, and the category bins are strict at both ends, so a PMV of exactly 0.5 falls in category C. One input calculator attaches here, the custom ensemble on clothing insulation. Verified at <code>4d6f6df</code>.</div>
 
       <h2>How it differs from the ASHRAE variant</h2>
       <table>
@@ -400,7 +402,7 @@
         <tr>
           <td>Occupant control of air speed</td>
           <td>No such setting</td>
-          <td>Available, and changes the applicability limits</td>
+          <td>Available as an option, off by default; with it off, up to three upper bounds apply to the relative air speed</td>
         </tr>
         <tr>
           <td>Clothing applicability</td>
@@ -414,7 +416,7 @@
         </tr>
         <tr>
           <td>Comfort boundary drawn</td>
-          <td>The edges of the <em>Neutral</em> category</td>
+          <td>Categories A, B and C, drawn as nested zones</td>
           <td>The standard's acceptable PMV limits</td>
         </tr>
         <tr>
@@ -427,10 +429,17 @@
         though a fan had been accounted for.</div>
 
       <h2>Environmental factors</h2>
-      <p>Air temperature and mean radiant temperature are accepted from 10 to 40&nbsp;&deg;C, relative air speed from 0
-        to 2&nbsp;m/s, and relative humidity across the full 0 to 100&nbsp;% range. Humidity can be entered in any of
-        the five modes relative humidity, humidity ratio, dew point, wet bulb or vapour pressure and temperature in
-        separate or operative mode.</p>
+      <p>Air temperature is accepted from 10 to 30&nbsp;&deg;C and mean radiant temperature from 10 to 40&nbsp;&deg;C.
+        Relative air speed is accepted from 0 to 1&nbsp;m/s, metabolic rate from 0.8 to 4&nbsp;met and clothing
+        insulation from 0 to 2&nbsp;clo. Water vapour pressure, which is derived from the temperature and the humidity
+        rather than entered, is accepted up to 2700&nbsp;Pa. Relative humidity itself carries no bound of its own beyond
+        the 0 to 100&nbsp;% its kind implies. Humidity can be entered in any of the five modes relative humidity,
+        humidity ratio, dew point, wet bulb or vapour pressure and temperature in separate or operative mode.</p>
+      <div class="note">These are the bounds the calculation library publishes as <code>ISO_7730_LIMITS</code>, which is
+        what gates an entered value. They are narrower than this model's chart axes, which run to 40&nbsp;&deg;C and
+        2&nbsp;m/s: a chart deliberately draws the field around the standard, and an axis range is not an applicability
+        bound. ISO also gates the <em>output</em>, accepting a PMV between &minus;2 and +2; a result outside that is
+        reported as a violation beside the result rather than stopping the calculation.</div>
       <p>Air speed is the relative air speed, so the measured-air-speed modifier applies the same correction for the
         occupant's own movement as it does on the ASHRAE model.</p>
 
@@ -477,9 +486,12 @@
         category's limit directly.</p>
 
       <h2>Edition</h2>
-      <p>The model is evaluated against the <strong>7730:2005</strong> edition. Where the calculation library offers a
-        newer default, this edition is pinned deliberately so results stay comparable with the published literature and
-        with earlier versions of this tool.</p>
+      <p>In <code>rewrite/v1</code> the model declares the <strong>ISO 7730:2025</strong> edition, which is the
+        calculation library's default, and the library's kernel follows that edition's Annex D (ADR-0002 decision 6).
+        The library treats the 2005 and 2025 editions as specifying identical equations and limits, so pinning one does
+        not change a result; it changes which edition the tool names. The edition appears in the result table's caption
+        and in the input summary on a downloaded image. An earlier version of this page said the 2005 edition was
+        pinned deliberately, which described the archived interface. Verified at <code>4d6f6df</code>.</p>
 
       <h2>Applicability</h2>
       <p>Inputs outside the standard's stated range are marked and reported as out of range rather than given a verdict.
@@ -491,8 +503,9 @@
 
       <h2>References</h2>
       <ul class="body">
-        <li>ISO 7730:2005, <em>Ergonomics of the thermal environment Analytical determination and interpretation of
-            thermal comfort using calculation of the PMV and PPD indices and local thermal comfort criteria</em>.</li>
+        <li>ISO 7730:2025, <em>Ergonomics of the thermal environment Analytical determination and interpretation of
+            thermal comfort using calculation of the PMV and PPD indices and local thermal comfort criteria</em>. This
+            is the edition the model declares; its kernel follows Annex D.</li>
         <li>Fanger, P.O. (1970). <em>Thermal Comfort: Analysis and Applications in Environmental Engineering</em>.</li>
       </ul>
 

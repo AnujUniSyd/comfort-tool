@@ -347,12 +347,12 @@
             <h4>Models</h4>
             <ul>
                 <li><a class="" href="../models/pmv-ashrae-55.html">PMV (ASHRAE 55)</a></li>
-                <li><a class="" href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
                 <li><a class="" href="../models/adaptive-ashrae-55.html">Adaptive (ASHRAE 55)</a></li>
+                <li><a class="" href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
+                <li><a class="on" href="../models/heat-index.html">Heat Index</a></li>
                 <li><a class="" href="../models/adaptive-en-16798-1.html">Adaptive (EN 16798-1)</a></li>
                 <li><a class="" href="../models/phs.html">PHS (ISO 7933:2023)</a></li>
                 <li><a class="" href="../models/utci.html">UTCI</a></li>
-                <li><a class="on" href="../models/heat-index.html">Heat Index</a></li>
                 <li><a class="" href="../models/humidex.html">Humidex</a></li>
                 <li><a class="" href="../models/wind-chill.html">Wind Chill</a></li>
             </ul>
@@ -368,6 +368,7 @@
             <ul>
                 <li><a href="../reference/references.html">References and citations</a></li>
                 <li><a href="../reference/thermal-comfort-questions.html">Thermal comfort questions</a></li>
+                <li><a href="../reference/glossary.html">Glossary</a></li>
             </ul>
             <h4>Site pages</h4>
             <ul>
@@ -380,7 +381,7 @@
             <div class="crumb">Models</div>
 
             <h1>Heat Index</h1>
-            <p><span class="pill">heat-index</span><span class="pill">Explore only</span><span class="pill">2
+            <p><span class="pill">heat-index-rothfusz</span><span class="pill">No standard, so Explore only</span><span class="pill">2
                     inputs</span></p>
             <p>The Heat Index, also called the apparent temperature, expresses how hot it feels when humidity is taken
                 into account alongside air temperature. It is the index used in United States weather warnings, and it
@@ -390,22 +391,32 @@
             <table>
                 <tr>
                     <th>Input</th>
-                    <th>Accepted range</th>
+                    <th>Applicability</th>
+                    <th>Chart axis</th>
                 </tr>
                 <tr>
                     <td>Air temperature</td>
+                    <td>27&nbsp;&deg;C and above, with no upper bound</td>
                     <td>20 to 50&nbsp;&deg;C</td>
                 </tr>
                 <tr>
                     <td>Relative humidity</td>
+                    <td>No bound of its own, beyond the 0 to 100&nbsp;% its kind implies</td>
                     <td>0 to 100&nbsp;%</td>
                 </tr>
             </table>
             <div class="warn">The lower bound is not a formality. Heat Index is defined for warm conditions only it says
-                nothing about a cool or cold day, and the tool will not calculate below 20&nbsp;&deg;C. For cold
-                conditions use <a href="wind-chill.html">Wind Chill</a>; for the whole range use <a
-                    href="utci.html">UTCI</a>.</div>
+                nothing about a cool or cold day. The bound the tool gates on is <strong>27&nbsp;&deg;C</strong>, the
+                single bound the calculation library publishes as
+                <code>HEAT_INDEX_ROTHFUSZ_LIMITS</code>; there is no upper bound and humidity carries none at all. An
+                entered air temperature below 27&nbsp;&deg;C is out of range and the model is not run.</div>
+            <div class="note">The two columns differ on purpose. The chart axes are declared by the model file, 20 to
+                50&nbsp;&deg;C against 0 to 100&nbsp;%, so that the banded field is drawn the way a published heat-index
+                table looks. An axis range is a viewport, not a limit on what may be entered. Both axes had to be
+                declared here precisely because applicability could answer for neither: it is minimum-only for air
+                temperature and absent for humidity. Verified at <code>4d6f6df</code>.</div>
 
+            <div class="note">For cold conditions the deployed tool offers Wind Chill, and UTCI covers the whole range. Neither is registered in <code>rewrite/v1</code>, so neither can be reached there yet.</div>
             <h2>Personal factors</h2>
             <p>None. The index assumes a person in shade, so it does not account for direct sun, and it does not account
                 for wind. Both make a real difference outdoors, which is why UTCI exists.</p>
@@ -450,7 +461,7 @@
 
             <h2>Applicability</h2>
             <p>Heat Index is an empirical fit, not a heat-balance model. It is reliable in the warm, humid conditions it
-                was fitted for and should not be extrapolated beyond them the tool enforces the ranges above. It also
+                was fitted for and should not be extrapolated beyond them the tool gates entry at 27&nbsp;&deg;C. It also
                 does not represent anyone in particular: it assumes shade, still air and a typical adult.</p>
             <div class="note">If you need to assess a specific workplace rather than a general public warning, PHS is
                 the appropriate model. Heat Index is a communication tool, not an occupational assessment.</div>

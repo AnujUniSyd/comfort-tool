@@ -347,12 +347,12 @@
             <h4>Models</h4>
             <ul>
                 <li><a class="on" href="../models/pmv-ashrae-55.html">PMV (ASHRAE 55)</a></li>
-                <li><a class="" href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
                 <li><a class="" href="../models/adaptive-ashrae-55.html">Adaptive (ASHRAE 55)</a></li>
+                <li><a class="" href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
+                <li><a class="" href="../models/heat-index.html">Heat Index</a></li>
                 <li><a class="" href="../models/adaptive-en-16798-1.html">Adaptive (EN 16798-1)</a></li>
                 <li><a class="" href="../models/phs.html">PHS (ISO 7933:2023)</a></li>
                 <li><a class="" href="../models/utci.html">UTCI</a></li>
-                <li><a class="" href="../models/heat-index.html">Heat Index</a></li>
                 <li><a class="" href="../models/humidex.html">Humidex</a></li>
                 <li><a class="" href="../models/wind-chill.html">Wind Chill</a></li>
             </ul>
@@ -369,6 +369,7 @@
                 <li><a href="../reference/references.html">References and citations</a></li>
                 <li><a href="../reference/thermal-comfort-questions.html">Thermal comfort questions</a>
                 </li>
+                <li><a href="../reference/glossary.html">Glossary</a></li>
             </ul>
             <h4>Site pages</h4>
             <ul>
@@ -381,7 +382,7 @@
             <div class="crumb">Models</div>
 
             <h1>PMV / PPD (ASHRAE 55)</h1>
-            <p><span class="pill">pmv-ashrae</span><span class="pill">ASHRAE 55 workspace</span><span
+            <p><span class="pill">pmv-ppd-ashrae</span><span class="pill">ASHRAE 55:2023</span><span
                     class="pill">Explore</span><span class="pill">Default model</span></p>
             <p>The Predicted Mean Vote is Fanger's heat-balance model. It predicts the average thermal sensation a large
                 group of people would report in a given environment, on a seven-point scale from &minus;3 (cold) to +3
@@ -392,6 +393,7 @@
             </p>
             <p>PMV uses all six.</p>
 
+            <div class="note">In <code>rewrite/v1</code> this is the <strong>default model</strong>: ADR-0002 decision 74 made the registry the tool's one display order, and this model heads it. It is reached at <code>/standard/ashrae-55/pmv-ppd-ashrae</code> and from Explore, and defaults to 25&nbsp;&deg;C air and radiant temperature, 0.1&nbsp;m/s air speed, 50&nbsp;&percnt; relative humidity, 1.1&nbsp;met and 0.5&nbsp;clo. Its result table shows PMV, PPD and a compliance verdict read as Yes or No. Two input calculators attach to its rows: solar gain on mean radiant temperature, and both clothing calculators on clothing insulation. A PMV of exactly 0.5 reads as Neutral, because this model's sensation bands are right-inclusive, where ISO's are not. Verified at <code>4d6f6df</code>.</div>
             <h2>Environmental factors</h2>
 
             <h3>Dry-bulb air temperature</h3>
@@ -427,10 +429,21 @@
             <div class="formula">v_relative = v_measured + 0.3 &times; (met &minus; 1)</div>
 
             <h4>Occupant control of air speed</h4>
-            <p>PMV under ASHRAE 55 carries a setting no other model has: whether occupants can adjust the air speed
+            <p>PMV under ASHRAE 55 carries an option no other model has: whether occupants can adjust the air speed
                 locally, with a desk fan or an operable ceiling fan. The standard permits higher air speeds where they
-                can, so the setting changes the applicability limits used to validate your input. The tool assumes local
-                control is present unless you say otherwise.</p>
+                can, so the option changes the upper bounds applied to the air speed.</p>
+            <div class="warn">In <code>rewrite/v1</code> the option is <strong>off by default</strong>, matching the
+                deployed CBE tool rather than the calculation library's own default, which is on. An earlier version of
+                this page said local control is assumed present unless you say otherwise; that is the opposite of what
+                the tool does.</div>
+            <div class="note">With the option off, v1 follows the <em>library's</em> air-speed rule and not the deployed
+                tool's. The library applies up to three upper bounds to the relative air speed, taken at ISO 7726's
+                air-speed-weighted operative temperature, and only below 0.7&nbsp;clo and 1.3&nbsp;met; the bound is
+                reported against the air speed as entered. The deployed tool instead checks the entered air speed
+                against a single limit clamped to 0.2&ndash;0.8&nbsp;m/s, at the plain mean of air and radiant
+                temperature, at every clothing and activity level. That difference is deliberately not ported, and is
+                the kind of thing the acceptance pass in issue #30 exists to record. Verified at
+                <code>4d6f6df</code>.</div>
             <p>This is the only part of the current tool that corresponds to the "fans during heatwaves" material in the
                 previous documentation; there is no separate fan or heatwave feature in this build.</p>
 
@@ -506,6 +519,7 @@
                     the chart all legible.</figcaption>
             </figure>
 
+            <div class="note">The bounds this model gates on are the ones the calculation library publishes as <code>ASHRAE_55_LIMITS</code>: air temperature and mean radiant temperature 10 to 40&nbsp;&deg;C, relative air speed 0 to 2&nbsp;m/s, metabolic rate 1 to 4&nbsp;met and clothing insulation 0 to 1.5&nbsp;clo. ASHRAE 55 bounds neither the vapour pressure nor the PMV output, so unlike ISO 7730 there is no bound on either. These are not the same thing as the chart axes, which this model declares separately and which run wider on purpose.</div>
             <h2>Applicability</h2>
             <p>Before returning a verdict the tool checks the inputs against the standard's applicability range, and
                 reports a point outside it as <strong>out of range</strong> rather than as a pass or a fail. Values are
@@ -521,7 +535,7 @@
                 </tr>
                 <tr>
                     <td>Occupant control of air speed</td>
-                    <td>Available</td>
+                    <td>Available as an option, off by default</td>
                     <td>No such setting</td>
                 </tr>
                 <tr>

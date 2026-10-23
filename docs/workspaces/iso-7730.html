@@ -327,12 +327,12 @@
       <h4>Models</h4>
       <ul>
         <li><a class="" href="../models/pmv-ashrae-55.html">PMV (ASHRAE 55)</a></li>
-        <li><a href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
         <li><a href="../models/adaptive-ashrae-55.html">Adaptive (ASHRAE 55)</a></li>
+        <li><a href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
+        <li><a href="../models/heat-index.html">Heat Index</a></li>
         <li><a href="../models/adaptive-en-16798-1.html">Adaptive (EN 16798-1)</a></li>
         <li><a href="../models/phs.html">PHS (ISO 7933:2023)</a></li>
         <li><a href="../models/utci.html">UTCI</a></li>
-        <li><a href="../models/heat-index.html">Heat Index</a></li>
         <li><a href="../models/humidex.html">Humidex</a></li>
         <li><a href="../models/wind-chill.html">Wind Chill</a></li>
       </ul>
@@ -348,6 +348,7 @@
       <ul>
         <li><a href="../reference/references.html">References and citations</a></li>
         <li><a href="../reference/thermal-comfort-questions.html">Thermal comfort questions</a></li>
+        <li><a href="../reference/glossary.html">Glossary</a></li>
       </ul>
       <h4>Site pages</h4>
       <ul>
@@ -451,9 +452,12 @@
         different category, compare the reported PMV against that category's limit directly.</p>
 
       <h4>Edition</h4>
-      <p>The model is evaluated against the <strong>7730:2005</strong> edition. Where the calculation library offers a
-        newer default, this edition is pinned deliberately so results stay comparable with the published literature and
-        with earlier versions of this tool.</p>
+      <p>In <code>rewrite/v1</code> the model declares the <strong>ISO 7730:2025</strong> edition, which is the
+        calculation library's default, and the library's kernel follows that edition's Annex D (ADR-0002 decision 6).
+        The library treats the 2005 and 2025 editions as specifying identical equations and limits, so pinning one does
+        not change a result; it changes which edition the tool names. The edition appears in the result table's caption
+        and in the input summary on a downloaded image. An earlier version of this page said the 2005 edition was
+        pinned deliberately, which described the archived interface. Verified at <code>4d6f6df</code>.</p>
 
       <h2>Applicability</h2>
       <p>Clothing insulation is accepted up to 2&nbsp;clo under ISO 7730 wider than the 1.5&nbsp;clo that ASHRAE 55

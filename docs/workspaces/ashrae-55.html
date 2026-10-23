@@ -327,12 +327,12 @@
       <h4>Models</h4>
       <ul>
         <li><a class="" href="../models/pmv-ashrae-55.html">PMV (ASHRAE 55)</a></li>
-        <li><a href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
         <li><a href="../models/adaptive-ashrae-55.html">Adaptive (ASHRAE 55)</a></li>
+        <li><a href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
+        <li><a href="../models/heat-index.html">Heat Index</a></li>
         <li><a href="../models/adaptive-en-16798-1.html">Adaptive (EN 16798-1)</a></li>
         <li><a href="../models/phs.html">PHS (ISO 7933:2023)</a></li>
         <li><a href="../models/utci.html">UTCI</a></li>
-        <li><a href="../models/heat-index.html">Heat Index</a></li>
         <li><a href="../models/humidex.html">Humidex</a></li>
         <li><a href="../models/wind-chill.html">Wind Chill</a></li>
       </ul>
@@ -348,6 +348,7 @@
       <ul>
         <li><a href="../reference/references.html">References and citations</a></li>
         <li><a href="../reference/thermal-comfort-questions.html">Thermal comfort questions</a></li>
+        <li><a href="../reference/glossary.html">Glossary</a></li>
       </ul>
       <h4>Site pages</h4>
       <ul>
@@ -462,9 +463,16 @@
         the predicted mean vote and the percentage of occupants expected to be dissatisfied.</p>
       <p>Air speed is handled as relative air speed, which includes the movement the occupant generates. Where occupants
         have local control of the air speed, with a fan for example, the standard permits higher air speeds, and the
-        <strong>air-speed control mode</strong> setting tells the tool which case applies; it changes the applicability
-        limits used to validate your input. The tool assumes local control is present unless you say otherwise.
-      </p>
+        <strong>occupant control of air speed</strong> option tells the tool which case applies; it changes the upper
+        bounds applied to the air speed.</p>
+      <div class="warn">In <code>rewrite/v1</code> that option is <strong>off by default</strong>, matching the deployed
+        CBE tool rather than the calculation library's own default, which is on. An earlier version of this page said
+        local control is assumed present unless you say otherwise; that is the opposite of what the tool does. With the
+        option off, v1 follows the library's air-speed rule &mdash; up to three upper bounds on the relative air speed,
+        taken at ISO 7726's air-speed-weighted operative temperature and applied only below 0.7&nbsp;clo and
+        1.3&nbsp;met &mdash; and not the deployed tool's single limit clamped to 0.2&ndash;0.8&nbsp;m/s at the plain
+        mean of air and radiant temperature. See the <a href="../models/pmv-ashrae-55.html">PMV / PPD (ASHRAE 55)</a>
+        page. Verified at <code>4d6f6df</code>.</div>
       <p>The comfort zone on the psychrometric chart is the region where the predicted mean vote stays within the
         standard's acceptable limits, drawn for the clothing, metabolic rate and air speed you entered so it moves as
         you change them.</p>

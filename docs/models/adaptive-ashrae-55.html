@@ -347,12 +347,12 @@
             <h4>Models</h4>
             <ul>
                 <li><a class="" href="../models/pmv-ashrae-55.html">PMV (ASHRAE 55)</a></li>
-                <li><a class="" href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
                 <li><a class="on" href="../models/adaptive-ashrae-55.html">Adaptive (ASHRAE 55)</a></li>
+                <li><a class="" href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
+                <li><a class="" href="../models/heat-index.html">Heat Index</a></li>
                 <li><a class="" href="../models/adaptive-en-16798-1.html">Adaptive (EN 16798-1)</a></li>
                 <li><a class="" href="../models/phs.html">PHS (ISO 7933:2023)</a></li>
                 <li><a class="" href="../models/utci.html">UTCI</a></li>
-                <li><a class="" href="../models/heat-index.html">Heat Index</a></li>
                 <li><a class="" href="../models/humidex.html">Humidex</a></li>
                 <li><a class="" href="../models/wind-chill.html">Wind Chill</a></li>
             </ul>
@@ -368,6 +368,7 @@
             <ul>
                 <li><a href="../reference/references.html">References and citations</a></li>
                 <li><a href="../reference/thermal-comfort-questions.html">Thermal comfort questions</a></li>
+                <li><a href="../reference/glossary.html">Glossary</a></li>
             </ul>
             <h4>Site pages</h4>
             <ul>
@@ -380,12 +381,13 @@
             <div class="crumb">Models</div>
 
             <h1>Adaptive comfort (ASHRAE 55)</h1>
-            <p><span class="pill">adaptive-ashrae</span><span class="pill">ASHRAE 55 workspace</span><span
-                    class="pill">Not in Explore</span></p>
+            <p><span class="pill">adaptive-ashrae</span><span class="pill">ASHRAE 55:2023</span><span
+                    class="pill">Standard page</span><span class="pill">Explore</span></p>
             <p>The adaptive model applies to naturally conditioned spaces buildings where occupants can open
                 windows and are free to adapt their clothing and activity. Rather than balancing heat flows, it predicts
                 the comfortable indoor temperature directly from the recent outdoor climate.</p>
 
+            <div class="note">In <code>rewrite/v1</code> this model declares ASHRAE 55:2023 and takes four inputs: air temperature, mean radiant temperature, prevailing mean outdoor temperature and air speed, defaulting to 25, 25, 25 and 0.3. It takes <strong>no humidity at all</strong>. Its result table gives the comfort temperature, the 80&nbsp;&percnt; and 90&nbsp;&percnt; lower and upper limits and the two acceptabilities, read as Yes or No, with no compliance line. No input calculator attaches to its rows. Verified at <code>4d6f6df</code>.</div>
             <h2>Why a second comfort model exists</h2>
             <p>Field studies in naturally ventilated buildings repeatedly found people comfortable at temperatures the
                 heat-balance model called too warm. People in these buildings adapt: they change what they wear, open a
@@ -458,19 +460,25 @@
                     outdoor temperature&amp;rdquo; legible.</figcaption>
             </figure>
 
+            <div class="note">The prevailing mean outdoor temperature is accepted from 10 to 33.5&nbsp;&deg;C, which is the bound the calculation library publishes as <code>ADAPTIVE_ASHRAE_LIMITS</code> and the only applicability this model declares. The operative temperature axis, 14 to 35&nbsp;&deg;C, is a chart axis rather than a bound: an undeclared quantity falls back to its applicability, and a declared axis is a viewport.</div>
+            <div class="note">Two chart behaviours are deliberate and worth stating. The marker sits at the library's air-speed-weighted operative temperature of the entered air and radiant temperatures, not at the plain mean of the two that the deployed tool uses. And at an air speed of roughly 0.6&nbsp;m/s or more, the table's upper limits and the chart's upper edge above the marker can differ by the cooling effect, because each follows its own source: the table reads the run's limits, while the chart steps each upper edge once its own base line reaches 25&nbsp;&deg;C.</div>
             <h2>Applicability</h2>
             <p>The relation is defined only over the outdoor temperature range above, and the chart is drawn over
                 exactly that range. Outside it the standard makes no claim, and neither does the tool.</p>
 
-            <h2>Why it is not in Explore</h2>
-            <p>Explore lets you edit band edges as numbers. Adaptive bands are not numbers each edge is a
-                function of the outdoor temperature, so it is a sloping line rather than a horizontal one. Allowing them
-                to be dragged would produce a chart that looks like an adaptive assessment but is not one, so the model
-                is offered only on its compliance workspace.</p>
+            <h2>On Explore</h2>
+            <p>This model has an Explore page like every other registered model: <code>pagesOf()</code> gives Standard
+                to a model that declares a standard, Explore to every model, and Time-series to a model that asks for
+                it. The archived interface withheld Explore from this model, on the reasoning that its band edges are
+                sloping lines rather than numbers and so cannot sensibly be dragged. That reasoning still describes the
+                chart, but it is no longer what the code does.</p>
+            <div class="note">Worth confirming with the maintainer: whether the adaptive chart's edges are meant to be
+                editable on Explore, or whether the Band list is simply not offered for this chart type. The page should
+                say which, and this paragraph should not guess. Verified at <code>4d6f6df</code>.</div>
 
             <h2>Where to find it</h2>
-            <p>On the <a href="../workspaces/ashrae-55.html">ASHRAE 55</a> workspace, alongside PMV. Switch between them
-                with the model selector at the top of the input panel.</p>
+            <p>On the <a href="../workspaces/ashrae-55.html">ASHRAE 55</a> Standard page, alongside the two PMV models,
+                and on its own Explore page. Switch between models with the model select.</p>
 
             <h2>References</h2>
             <ul class="body">

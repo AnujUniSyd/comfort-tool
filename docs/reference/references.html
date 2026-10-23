@@ -71,12 +71,12 @@ figure.screenshot figcaption{font-size:12.5px;color:var(--muted);margin-top:8px}
 <h4>Models</h4>
 <ul>
 <li><a class="" href="../models/pmv-ashrae-55.html">PMV (ASHRAE 55)</a></li>
-<li><a class="" href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
 <li><a class="" href="../models/adaptive-ashrae-55.html">Adaptive (ASHRAE 55)</a></li>
+<li><a class="" href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></li>
+<li><a class="" href="../models/heat-index.html">Heat Index</a></li>
 <li><a class="" href="../models/adaptive-en-16798-1.html">Adaptive (EN 16798-1)</a></li>
 <li><a class="" href="../models/phs.html">PHS (ISO 7933:2023)</a></li>
 <li><a class="" href="../models/utci.html">UTCI</a></li>
-<li><a class="" href="../models/heat-index.html">Heat Index</a></li>
 <li><a class="" href="../models/humidex.html">Humidex</a></li>
 <li><a class="" href="../models/wind-chill.html">Wind Chill</a></li>
 </ul>
@@ -92,6 +92,7 @@ figure.screenshot figcaption{font-size:12.5px;color:var(--muted);margin-top:8px}
 <ul>
 <li><a class="on" href="../reference/references.html">References and citations</a></li>
 <li><a class="" href="../reference/thermal-comfort-questions.html">Thermal comfort questions</a></li>
+<li><a class="" href="../reference/glossary.html">Glossary</a></li>
 </ul>
 <h4>Site pages</h4>
 <ul>
@@ -130,7 +131,7 @@ figure.screenshot figcaption{font-size:12.5px;color:var(--muted);margin-top:8px}
 
 <tr>
 <td>S2</td>
-<td>ISO 7730:2005, <em>Ergonomics of the thermal environment  Analytical determination and interpretation of thermal comfort using calculation of the PMV and PPD indices and local thermal comfort criteria</em>.</td>
+<td>ISO 7730:2025, <em>Ergonomics of the thermal environment  Analytical determination and interpretation of thermal comfort using calculation of the PMV and PPD indices and local thermal comfort criteria</em>.</td>
 <td><a href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a></td>
 </tr>
 
@@ -154,7 +155,7 @@ figure.screenshot figcaption{font-size:12.5px;color:var(--muted);margin-top:8px}
 </table>
 
 <div class="warn">
-<strong>ISO 7730 edition.</strong> The tool implements the applicability limits of <strong>ISO 7730:2005</strong>. A later edition of the standard has since been published. The PMV equation itself is unchanged, but do not read a result from this tool as a conformity statement against an edition it does not implement. The <a href="../models/pmv-iso-7730.html">PMV (ISO 7730)</a> page states the limits the tool actually applies.
+<strong>ISO 7730 edition.</strong> <code>rewrite/v1</code>'s PMV (ISO 7730) model declares <strong>ISO 7730:2025</strong>, and the calculation library's kernel follows that edition's Annex D (ADR-0002 decision 6). The library treats the 2005 and 2025 editions as specifying identical equations and limits, so a result does not change between them; what changes is which edition the tool names. The edition appears in the result table's caption and in the input summary on a downloaded image, so it can be checked against the tool. An earlier version of this page cited the 2005 edition, which is what the archived interface implemented.
 </div>
 
 <h2>Model publications</h2>
