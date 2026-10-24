@@ -1,169 +1,184 @@
-import { psy_ta_rh } from "jsthermalcomfort";
+import { hr_to_rh, psy_ta_rh } from "jsthermalcomfort";
 import { chartInk } from "$lib/core/bandPalette";
-import {
-  NO_ROOT_FOUND,
-  pmv_psychrometric_zone,
-  type PmvFunction,
-  type PsychrometricPoint,
-} from "$lib/temporary-library/pmv_psychrometric_zone";
-import { temperatureMode } from "$lib/core/entryModes";
-import { optionsReader, requireValue, resolveQuantities, resultValue, valuesReader } from "$lib/core/libraryInputs";
-import {
-  psychrometricChartOf,
-  requireAxisRange,
-  type OptionsReader,
-  type Range,
-  type RegisteredModel,
-} from "$lib/core/modelDeclaration";
-import { quantities, type Quantity } from "$lib/core/quantities";
-import { displayUnitFor } from "$lib/core/units";
-import { copy } from "$lib/text/copy";
-import {
-  axisTitle,
-  type Annotation,
-  type ChartRequest,
-  type ChartSpec,
-  type LegendEntry,
-  type Trace,
-} from "./chartSpec";
+import { resolveQuantities } from "$lib/core/libraryInputs";
+import { requireAxisRange, requireScan, type Range, type RegisteredModel } from "$lib/core/modelDeclaration";
+import { DEFAULT_ATMOSPHERIC_PRESSURE, quantities } from "$lib/core/quantities";
+import { requireValue, withEntryModes, type ValueEntryModes } from "$lib/core/slot";
+import { displayUnitFor, numberWithUnit } from "$lib/core/units";
+import type { ChartRequest } from "./chartRequest";
+import type { Annotation, ChartSpec, LegendEntry, PathTrace, Trace } from "./chartSpec";
+import { axisFor, fieldPaintFor, markerFor, samples, type ScanFrame, type ScannedField } from "./specParts";
 
 const q = quantities;
 
 /** Relative humidity of each isoline, [%]. The saturation line is the last one. */
 const ISOLINE_STEP = 10;
 /**
+ * Relative humidity of each labelled isoline, [%]: every other one. Where the
+ * isolines leave the top their ends leave room for a label every other
+ * isoline at the plot's cap and at the Image's single column, not for one on
+ * each.
+ */
+const LABEL_STEP = 2 * ISOLINE_STEP;
+/**
  * Samples along each isoline, across the declared temperature range. 121 over
  * 10–40 °C is the resolution the CBE tool draws these curves at.
  */
 const ISOLINE_SAMPLES = 121;
 
-/** One line per 5% relative humidity, as the ADR §4.7 precision requires. */
-const ZONE_RH_STEP = 5;
+/**
+ * The frame `model`'s psychrometric chart is scanned in (ADR-0002 decision
+ * 61): the model's scan's output, swept over the temperature entry mode's axis
+ * quantity — `tdb`, or `operative_tmp` under operative entry — across its
+ * declared range, and over the humidity ratio across the range drawn at the
+ * pressure. Sweeping `hr` puts each cell in the humidity-ratio entry mode, so
+ * the slot's own conversion gives its relative humidity at the pressure and at
+ * the temperature the mode has, and a supersaturated cell is run at its true
+ * relative humidity above 100. A model without a scan throws, naming it.
+ */
+export function psychrometricScanFrameFor(
+  model: RegisteredModel,
+  entryModes: ValueEntryModes,
+  atmosphericPressure: number,
+): ScanFrame {
+  const axis = entryModes.temperature.mode.axis;
+  return {
+    model,
+    output: requireScan(model).output,
+    x: { quantity: axis, range: requireAxisRange(model, axis) },
+    y: { quantity: q.hr, range: drawnHumidityRatioRange(requireAxisRange(model, q.hr), atmosphericPressure) },
+    entryModes,
+    atmosphericPressure,
+  };
+}
 
 /**
- * The psychrometric chart: relative-humidity isolines, the declaration's
- * Comfort zones traced by `pmv_psychrometric_zone`, and the slot's current
- * state.
+ * The psychrometric chart: relative-humidity isolines, the marker of every
+ * slot of the request, and the paint of each slot's scan in
+ * {@link psychrometricScanFrameFor}'s frame ({@link fieldPaintFor}), as the
+ * dynamic chart paints its own (ADR-0002 decision 61): given a Band list
+ * ({@link ChartRequest.bands}), the list over the first slot's scan; given
+ * none, each slot's Comfort zones as contours of its own scan, a lone slot
+ * exactly as each of several (ADR-0002 decisions 50 and 71).
+ * Either way one hover grid reads the temperature, the humidity ratio and
+ * each slot's number, and with a list the band. `scans`, one per slot in the
+ * request's order, are the slots' scans in that frame, handed over by a
+ * caller that keeps them; without them every slot is scanned here.
  *
- * The zones are drawn largest first, so each inner one sits on top, in one
- * hue whose opacity rises inwards. Never the thermal-sensation palette: it is
- * diverging, and nested zones are levels of one thing.
+ * The x axis quantity is that of the temperature entry mode among
+ * {@link ChartRequest.entryModes}: `tdb` when the two temperatures are entered
+ * separately, `operative_tmp` under operative entry, where `tr` follows it in
+ * every cell, which is the geometry the CBE tool's psychtop chart draws. The
+ * drawn x range is the model's axis range for whichever temperature the mode
+ * puts on x: declared, else its applicability bound (ADR-0002 decision 5).
  *
- * The x axis quantity is the temperature entry mode's (`tdb` when the two
- * temperatures are entered separately, `operative_tmp` under operative entry), and
- * operative entry solves the zone with `tr_follows_db`, which is the geometry
- * the CBE tool's psychtop chart draws. No root finder is written here — the
- * temporary library owns that (ADR-0002 decision 24). The drawn extent is the model's declared
- * axis range for whichever temperature the mode puts on x, never its
- * applicability limits (ADR §4.4).
+ * The isolines, the scan and the marker are of the air at the request's
+ * atmospheric pressure, and the humidity-ratio axis reaches as far as
+ * {@link drawnHumidityRatioRange} says (ADR-0002 decision 49).
+ *
+ * A cell above saturation, `rh` > 100 at the pressure, is air that cannot
+ * exist: it is scanned and painted, the cover ({@link coverFor}) hides it, and
+ * it reads "—" and no band. The cover sits over the paint and the hover grid
+ * and under the saturation line and the markers, so a zone's or a band's top
+ * edge is the saturation line itself (ADR-0002 decision 61). The other
+ * isolines lie between the fills and the outlines, so only an outline cuts
+ * one (decision 62).
  */
-export function psychrometricSpec(request: ChartRequest): ChartSpec {
-  const { model, slot, slotLabel, unitSystem } = request;
-  const operative = slot.temperature.mode === temperatureMode.operative;
-  const axisQuantity = slot.temperature.mode.axis;
-  const dbUnit = displayUnitFor(axisQuantity, unitSystem);
+export function psychrometricSpec(request: ChartRequest, scans?: readonly ScannedField[]): ChartSpec {
+  const { model, unitSystem, atmosphericPressure } = request;
+  const axisQuantity = request.entryModes.temperature.mode.axis;
+  const xUnit = displayUnitFor(axisQuantity, unitSystem);
   const hrUnit = displayUnitFor(q.hr, unitSystem);
   const rhUnit = displayUnitFor(q.rh, unitSystem);
-  const dbRange = requireAxisRange(model, axisQuantity);
-  const hrRange = requireAxisRange(model, q.hr);
+  const frame = psychrometricScanFrameFor(model, request.entryModes, atmosphericPressure);
+  const xRange = frame.x.range;
+  const hrRange = frame.y.range;
 
-  const chart = psychrometricChartOf(model);
-  if (!chart) {
-    throw new Error(`${model.info.label} declares no psychrometric chart`);
-  }
-
-  const resolved = resolveQuantities(slot, model);
-  const airSpeed = model.relativeAirSpeed ? q.vr : q.v;
-  // Every zone is solved at the same inputs; only the limit differs.
-  const zoneInputs = {
-    tr: requireValue(resolved, q.tr),
-    vr: requireValue(resolved, airSpeed),
-    met: requireValue(resolved, q.met),
-    clo: requireValue(resolved, q.clo),
-    pmv_function: pmvOfRun(model, resolved, optionsReader(slot.options), airSpeed),
-    tr_follows_db: operative,
-    rh_step: ZONE_RH_STEP,
-  };
-  const largestFirst = [...chart.zones].sort((a, b) => b.limit - a.limit);
-
-  const traces: Trace[] = [];
-  const legend: LegendEntry[] = [];
+  const paint = fieldPaintFor(request, frame, scans, (temperature, hr) => hr_to_rh(hr, temperature, atmosphericPressure) > 100);
   const annotations: Annotation[] = [];
 
-  const temperatures = samples(dbRange);
+  const temperatures = samples(xRange, ISOLINE_SAMPLES);
+  /** The isolines below saturation, 10 to 90 %. */
+  const isolines: PathTrace[] = [];
+  let saturationLine: PathTrace | undefined;
+  let cover: PathTrace | undefined;
   for (let rh = ISOLINE_STEP; rh <= 100; rh += ISOLINE_STEP) {
-    // Cut the curve where it leaves the top of the viewport, so the label sits
+    const sampled = temperatures.map((temperature) => ({ temperature, hr: psy_ta_rh(temperature, rh, atmosphericPressure).hr }));
+    // Cut the curve where it leaves the top of the viewport, so a label sits
     // on the last drawn point rather than off the plot.
-    const curve = temperatures
-      .map((db) => ({ db, hr: psy_ta_rh(db, rh).hr }))
-      .filter((point) => point.hr <= hrRange.max);
+    const curve = sampled.filter((point) => point.hr <= hrRange.max);
     const end = curve[curve.length - 1];
     if (!end) {
       continue;
     }
     const saturation = rh === 100;
-    traces.push({
+    if (saturation) {
+      const boundary = coverFor(sampled, xRange, hrRange);
+      // Chrome with no name and no legend entry: it reads nothing, so the
+      // hover grid under it reads for the cell, "—" as it does above the line.
+      cover = {
+        kind: "path",
+        x: boundary.map((point) => xUnit.fromSi(point.temperature)),
+        y: boundary.map((point) => hrUnit.fromSi(point.hr)),
+        color: chartInk.ground,
+        width: 0,
+        fill: chartInk.ground,
+        hover: "off",
+      };
+    }
+    const rhText = numberWithUnit(rh, rhUnit);
+    const isoline: PathTrace = {
       kind: "path",
-      x: curve.map((point) => dbUnit.fromSi(point.db)),
+      x: curve.map((point) => xUnit.fromSi(point.temperature)),
       y: curve.map((point) => hrUnit.fromSi(point.hr)),
       color: saturation ? chartInk.saturationLine : chartInk.isoline,
-      width: saturation ? 1.5 : 1,
+      width: saturation ? chartInk.saturationLineWidth : chartInk.isolineWidth,
       // Chrome: the isolines carry the humidity reading in their label, not on
       // the pointer (ADR §4.4).
       hover: "off",
-      label: `${q.rh.label} ${rh}${rhUnit.symbol}`,
-    });
-    annotations.push({
-      x: dbUnit.fromSi(end.db),
-      y: hrUnit.fromSi(end.hr),
-      text: `${rh}${rhUnit.symbol}`,
-    });
-  }
-  legend.push({ label: q.rh.label, swatch: "line", color: chartInk.isoline });
-
-  largestFirst.forEach((zone, index) => {
-    const solved = pmv_psychrometric_zone({ ...zoneInputs, pmv_limit: zone.limit });
-    const polygon = solved.polygon.filter(isSolved);
-    if (polygon.length <= 2) {
-      return;
+      label: `${q.rh.label} ${rhText}`,
+    };
+    if (saturation) {
+      saturationLine = isoline;
+    } else {
+      isolines.push(isoline);
     }
-    const label = copy.zoneLegend(zone);
-    const fill = chartInk.zoneFill(index, largestFirst.length);
-    traces.push({
-      kind: "path",
-      x: polygon.map((point) => dbUnit.fromSi(point.db)),
-      y: polygon.map((point) => hrUnit.fromSi(point.hr)),
-      color: chartInk.zoneLine,
-      width: 1.5,
-      fill,
-      hover: "off",
-      label,
-    });
-    legend.push({ label, swatch: "fill", color: fill });
-  });
+    if (rh % LABEL_STEP === 0) {
+      annotations.push({
+        x: xUnit.fromSi(end.temperature),
+        y: hrUnit.fromSi(end.hr),
+        text: rhText,
+      });
+    }
+  }
+  // The one drawing order (ADR-0002 decision 62); the function's comment says why.
+  const traces: Trace[] = [...paint.fills, ...isolines, ...paint.outlines, paint.hoverGrid];
+  if (cover) {
+    traces.push(cover);
+  }
+  if (saturationLine) {
+    traces.push(saturationLine);
+  }
 
-  traces.push({
-    kind: "point",
-    x: dbUnit.fromSi(requireValue(resolved, q.tdb)),
-    y: hrUnit.fromSi(psy_ta_rh(requireValue(resolved, q.tdb), requireValue(resolved, q.rh)).hr),
-    color: chartInk.marker,
-    hover: "off",
-    label: slotLabel,
+  // Each slot's legend entries, its zones then its marker, so the legend reads slot by slot.
+  const legend: LegendEntry[] = [{ label: q.rh.label, swatch: "line", color: chartInk.isoline }, ...paint.bandLegend];
+  request.slots.forEach((charted, position) => {
+    const resolved = resolveQuantities(withEntryModes(charted.slot, request.entryModes, model), model, atmosphericPressure);
+    const tdb = requireValue(resolved, q.tdb);
+    const marker = markerFor(
+      charted,
+      xUnit.fromSi(tdb),
+      hrUnit.fromSi(psy_ta_rh(tdb, requireValue(resolved, q.rh), atmosphericPressure).hr),
+    );
+    traces.push(marker.trace);
+    legend.push(...paint.zoneLegendOfSlot[position], marker.legendEntry);
   });
-  legend.push({ label: slotLabel, swatch: "marker", color: chartInk.marker });
 
   return {
     traces,
     layout: {
-      x: {
-        title: axisTitle(axisQuantity, dbUnit.symbol),
-        range: [dbUnit.fromSi(dbRange.min), dbUnit.fromSi(dbRange.max)],
-      },
-      y: {
-        title: axisTitle(q.hr, hrUnit.symbol),
-        range: [hrUnit.fromSi(hrRange.min), hrUnit.fromSi(hrRange.max)],
-        tickFormat: ".3f",
-      },
+      x: axisFor(axisQuantity, xUnit, xRange),
+      y: axisFor(q.hr, hrUnit, hrRange),
     },
     legend,
     annotations,
@@ -171,46 +186,41 @@ export function psychrometricSpec(request: ChartRequest): ChartSpec {
 }
 
 /**
- * The zone's PMV function: the model's own `run` at the slot's resolved
- * inputs, with the six the solver varies replaced. The zone therefore solves
- * exactly the equation the results table shows, edition, `wme` and options
- * included, and no declaration has to restate it. `run` returns unrounded
- * output for this reason: a PMV rounded to 0.01 is a staircase the solver
- * cannot root-find.
+ * The humidity-ratio axis as drawn at `atmosphericPressure`. A declaration
+ * writes its range at the default pressure; the upper end is scaled by the
+ * default over the pressure, so a thinner air, which holds more water per
+ * kilogram at the same relative humidity, gets a taller axis and the
+ * declaration never mentions the pressure (ADR-0002 decision 45, as amended
+ * 2026-09-29).
  */
-function pmvOfRun(
-  model: RegisteredModel,
-  resolved: ReadonlyMap<Quantity, number>,
-  options: OptionsReader,
-  airSpeed: Quantity,
-): PmvFunction {
-  if (!model.info.outputs[q.pmv.key]) {
-    throw new Error(`${model.info.label} declares a psychrometric chart, but its result carries no ${q.pmv.label}`);
-  }
-  return (tdb, tr, vr, rh, met, clo) => {
-    const inputs = new Map(resolved)
-      .set(q.tdb, tdb)
-      .set(q.tr, tr)
-      .set(airSpeed, vr)
-      .set(q.rh, rh)
-      .set(q.met, met)
-      .set(q.clo, clo);
-    const pmv = resultValue(model.run(valuesReader(inputs), options), q.pmv);
-    return typeof pmv === "number" ? pmv : Number.NaN;
-  };
+function drawnHumidityRatioRange(declared: Range, atmosphericPressure: number): Range {
+  return { ...declared, max: (declared.max * DEFAULT_ATMOSPHERIC_PRESSURE) / atmosphericPressure };
 }
 
-/** `ISOLINE_SAMPLES` temperatures across the drawn range, in SI. */
-function samples(range: Range): readonly number[] {
-  const step = (range.max - range.min) / (ISOLINE_SAMPLES - 1);
-  return Array.from({ length: ISOLINE_SAMPLES }, (_, index) => range.min + index * step);
+/** A point of the chart in SI: a temperature on the x axis and a humidity ratio. */
+interface ChartPoint {
+  readonly temperature: number;
+  readonly hr: number;
 }
 
 /**
- * Unsolved rows carry whatever the solver returned — NaN from the secant
- * method, `NO_ROOT_FOUND` from the bisection fallback. Dropping them leaves a
- * shorter polygon rather than one with a spike in it.
+ * The boundary of the cover over the air above saturation, in SI (ADR-0002
+ * decision 61): the saturation line as `saturation` samples it, from the
+ * lowest temperature to where it leaves the top of `hrRange`, interpolated
+ * there between its two samples, and closed through the plot's top-left
+ * corner, so the left edge closes it. A line that never leaves the top runs to
+ * the right edge and closes through the top-right corner first. The cover
+ * hides whatever a scan paints above the line, so a band's or a zone's top
+ * edge is the line itself.
  */
-function isSolved(point: PsychrometricPoint): boolean {
-  return Number.isFinite(point.db) && point.db !== NO_ROOT_FOUND && Number.isFinite(point.hr);
+function coverFor(saturation: readonly ChartPoint[], xRange: Range, hrRange: Range): ChartPoint[] {
+  const leaves = saturation.findIndex((point) => point.hr > hrRange.max);
+  const topLeft = { temperature: xRange.min, hr: hrRange.max };
+  if (leaves === -1) {
+    return [...saturation, { temperature: xRange.max, hr: hrRange.max }, topLeft];
+  }
+  const below = saturation[leaves - 1];
+  const above = saturation[leaves];
+  const along = (hrRange.max - below.hr) / (above.hr - below.hr);
+  return [...saturation.slice(0, leaves), { temperature: below.temperature + along * (above.temperature - below.temperature), hr: hrRange.max }, topLeft];
 }

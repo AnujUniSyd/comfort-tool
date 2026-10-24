@@ -1,227 +1,147 @@
 <script lang="ts">
-  import type { RegisteredModel } from "$lib/core/modelDeclaration";
-  import { standards } from "$lib/core/standard";
-  import { unitSystem } from "$lib/core/unitSystem";
-  import { Outputs } from "$lib/state/compute.svelte";
-  import { Session } from "$lib/state/session.svelte";
+  import { chartInk } from "$lib/core/bandPalette";
+  import { slotBadges } from "$lib/core/slotBadge";
+  import { getOpenSession, getTabControls } from "$lib/state/openSession";
+  import { slotPositions, type SlotPosition } from "$lib/state/session.svelte";
   import { copy } from "$lib/text/copy";
   import ChartLegend from "$lib/ui/charts/ChartLegend.svelte";
   import PlotlyChart from "$lib/ui/charts/PlotlyChart.svelte";
   import ChartControls from "$lib/ui/inputs/ChartControls.svelte";
-  import InputPanel from "$lib/ui/inputs/InputPanel.svelte";
+  import ExportImageDialog from "$lib/ui/inputs/ExportImageDialog.svelte";
+  import InputPanel, { type SlotColumn } from "$lib/ui/inputs/InputPanel.svelte";
+  import ModelSelect from "$lib/ui/inputs/ModelSelect.svelte";
   import ModelSwitchDialog from "$lib/ui/inputs/ModelSwitchDialog.svelte";
-  import Grid from "$lib/ui/layout/Grid.svelte";
+  import SessionControls from "$lib/ui/inputs/SessionControls.svelte";
   import Inline from "$lib/ui/layout/Inline.svelte";
+  import PageFrame from "$lib/ui/layout/PageFrame.svelte";
+  import SlotColumns from "$lib/ui/layout/SlotColumns.svelte";
   import Stack from "$lib/ui/layout/Stack.svelte";
   import ResultTable from "$lib/ui/outputs/ResultTable.svelte";
-  import { Button } from "$lib/ui/primitives/button";
-  import { Label } from "$lib/ui/primitives/label";
-  import * as Select from "$lib/ui/primitives/select";
-  import {
-    defaultModel,
-    interceptLinkClick,
-    modelFromRoute,
-    modelsOf,
-    navigateTo,
-    pathTo,
-    redirectTo,
-    requireStandard,
-  } from "./navigation";
+  import { Toggle } from "$lib/ui/primitives/toggle";
+  import { inAppSwitch } from "./inAppSwitch";
+  import { modelChoicesOn } from "./navigation";
+  import PageNavigation from "./PageNavigation.svelte";
 
-  const id = $props.id();
-  const session = new Session(modelFromRoute() ?? defaultModel());
-  const outputs = new Outputs(session);
+  // The app's one session, which the address moves (`App.svelte`).
+  const { session, outputs } = getOpenSession();
+  const tab = getTabControls();
+  const inApp = inAppSwitch(session);
 
-  // The URL names the model; an unknown URL falls back to the default. This is
-  // the address's path — a typed URL, the back button, a share link — and it
-  // never asks. After an in-app switch it finds the model already current and
-  // does nothing.
-  $effect(() => {
-    const model = modelFromRoute();
-    if (model) {
-      session.setModel(model);
-    } else {
-      redirectTo(defaultModel());
+  /** Slot 1 cannot be disabled: its button is pressed and does nothing. */
+  function setSlotEnabled(position: SlotPosition, enabled: boolean) {
+    if (position !== 0) {
+      session.setSlotEnabled(position, enabled);
     }
+  }
+
+  /** The input panel's columns: slot 1 alone, or on Compare the three, `null` for a slot not compared. */
+  const columns = $derived.by((): readonly [SlotColumn, ...(SlotColumn | null)[]] => {
+    const columnAt = (position: SlotPosition): SlotColumn | null => {
+      const inputSlot = session.slots[position];
+      const slotOutputs = outputs.slots.find((slot) => slot.position === position);
+      return inputSlot && slotOutputs ? { inputSlot, outputs: slotOutputs } : null;
+    };
+    const first = { inputSlot: session.slots[0], outputs: outputs.slots[0] };
+    return session.compare ? [first, columnAt(1), columnAt(2)] : [first];
   });
-
-  /**
-   * Switching from inside the app: the session is asked first and the address
-   * is told after, which is the order ADR-0002 decision 32 needs. Navigating
-   * first would make the address the thing that switches the model, leaving no
-   * moment at which the session could ask about the switch. No effect follows
-   * the session with the address, because the handlers that switch can say
-   * both things themselves.
-   */
-  function switchModel(model: RegisteredModel) {
-    session.requestModel(model);
-    navigateToSessionModel();
-  }
-
-  function acceptSwitch() {
-    session.acceptSwitch();
-    navigateToSessionModel();
-  }
-
-  /**
-   * The address follows the session, never the other way round. A request the
-   * session held a question about changed no model, so there is nothing to
-   * tell the address until the question has been answered with a yes.
-   */
-  function navigateToSessionModel() {
-    if (session.model !== modelFromRoute()) {
-      navigateTo(session.model);
-    }
-  }
-
-  const navigation = $derived(
-    standards
-      .map((entry) => ({ standard: entry, models: modelsOf(entry.id) }))
-      .filter((group) => group.models.length > 0),
-  );
-
-  const modelChoices = $derived(modelsOf(requireStandard(session.model)));
-
-  function unitVariant(system: typeof unitSystem.si | typeof unitSystem.ip) {
-    return session.unitSystem === system ? "default" : "outline";
-  }
 </script>
 
-<main>
-  <Stack gap="6">
-    <Inline justify="between" align="center">
-      <h1>{copy.appTitle}</h1>
+<PageFrame notice={tab.notice} onclosenotice={tab.closeNotice}>
+  {#snippet navigation()}
+    <PageNavigation {session} onfollow={inApp.follow} />
+  {/snippet}
+
+  {#snippet sessionControls()}
+    <SessionControls
+      {session}
+      atmosphericPressureOutOfRange={outputs.atmosphericPressureOutOfRange}
+      onreset={tab.reset}
+      link={tab.link}
+      oncopyrefused={() => tab.raiseNotice("copyRefused")}
+    />
+  {/snippet}
+
+  {#snippet inputs()}
+    <Stack gap="4">
       <Inline gap="2" align="center">
-        <span>{copy.units}</span>
-        <Button size="sm" variant={unitVariant(unitSystem.si)} onclick={() => (session.unitSystem = unitSystem.si)}>
-          {unitSystem.si.title}
-        </Button>
-        <Button size="sm" variant={unitVariant(unitSystem.ip)} onclick={() => (session.unitSystem = unitSystem.ip)}>
-          {unitSystem.ip.title}
-        </Button>
+        <ModelSelect
+          choices={modelChoicesOn(session)}
+          model={session.model}
+          onchoose={(model) => inApp.follow({ page: session.page, model })}
+        />
+        <Toggle size="sm" variant="outline" bind:pressed={() => session.compare, (pressed) => session.setCompare(pressed)}>
+          {copy.compare}
+        </Toggle>
       </Inline>
-    </Inline>
-
-    <Grid columns="12rem minmax(0, 24rem) minmax(0, 1fr)" gap="6">
-      <nav>
-        <Stack gap="2">
-          {#each navigation as group (group.standard.id)}
-            <strong>{group.standard.displayName}</strong>
-            {#each group.models as model (model)}
-              <!--
-                A link that keeps its address, so a new tab and a copied
-                address still work, and that asks the session first when it is
-                the page the click belongs to. A click the navigation module
-                declines to hand over is the browser's, and arrives as an
-                address.
-              -->
-              <a
-                href={pathTo(model)}
-                aria-current={session.model === model ? "page" : undefined}
-                onclick={(event) => {
-                  if (interceptLinkClick(event)) {
-                    switchModel(model);
-                  }
-                }}
-              >
-                {model.info.label}
-              </a>
-            {/each}
-          {/each}
-        </Stack>
-      </nav>
-
-      <section>
-        <Stack gap="4">
-          <h2>{copy.inputs}</h2>
-          <Inline gap="2" align="center">
-            <Label for="{id}-model">{copy.model}</Label>
-            <!--
-              A function binding, not a value plus a change handler: the
-              session, not the select, decides which model is current, and a
-              switch the person declines has to leave the select where it was.
-              With a one-way `value` the select would keep the model it had
-              offered, disagree with the page behind the dialog, and refuse to
-              offer that model a second time.
-            -->
-            <Select.Root
-              type="single"
-              bind:value={
-                () => String(modelChoices.indexOf(session.model)),
-                (value) => switchModel(modelChoices[Number(value)])
-              }
+      <!--
+        While Compare is on, a slot button at the head of each slot column; a
+        disabled slot's column is empty below its button (ADR-0002 decision 50).
+        The rows reflow inside the column, which keeps its width (decision 67, rule 10).
+      -->
+      {#if session.compare}
+        <SlotColumns count={slotPositions.length}>
+          {#each slotPositions as position (position)}
+            <Toggle
+              size="sm"
+              variant="outline"
+              bind:pressed={() => session.isSlotEnabled(position), (pressed) => setSlotEnabled(position, pressed)}
             >
-              <Select.Trigger id="{id}-model">{session.model.info.label}</Select.Trigger>
-              <Select.Content>
-                {#each modelChoices as model, index (model)}
-                  <Select.Item value={String(index)} label={model.info.label} />
-                {/each}
-              </Select.Content>
-            </Select.Root>
-          </Inline>
-          <InputPanel
-            model={session.model}
-            inputSlot={session.slots[0]}
-            unitSystem={session.unitSystem}
-            outOfRange={outputs.outOfRange}
-            violations={outputs.violations}
-          />
-          <ModelSwitchDialog
-            pending={session.pendingSwitch}
-            unitSystem={session.unitSystem}
-            onaccept={acceptSwitch}
-            ondecline={() => session.declineSwitch()}
-          />
-        </Stack>
-      </section>
+              <span class="swatch swatch-marker" style:--swatch-color={chartInk.marker(slotBadges[position].hue)}></span>
+              {slotBadges[position].name}
+            </Toggle>
+          {/each}
+        </SlotColumns>
+      {/if}
+      <InputPanel
+        model={session.model}
+        {columns}
+        unitSystem={session.unitSystem}
+        atmosphericPressure={session.atmosphericPressure}
+        entryModeSetters={session}
+      />
+      <ModelSwitchDialog
+        pending={session.pendingSwitch}
+        namesSlots={session.comparedPositions.length > 1}
+        unitSystem={session.unitSystem}
+        onaccept={inApp.accept}
+        ondecline={() => session.declineSwitch()}
+      />
+    </Stack>
+  {/snippet}
 
-      <section>
-        <Stack gap="4">
-          <ResultTable
-            model={session.model}
-            result={outputs.perSlot[0]}
-            unitSystem={session.unitSystem}
-            slotName={copy.slotName(0)}
-            outOfRange={outputs.outOfRange.length > 0}
-            violations={outputs.violations}
-          />
+  {#snippet results(headingId)}
+    <ResultTable
+      model={session.model}
+      rows={outputs.slots}
+      unitSystem={session.unitSystem}
+      compare={session.compare}
+      labelledby={headingId}
+    />
+  {/snippet}
 
-          <ChartControls model={session.model} inputSlot={session.slots[0]} chart={session.chart} />
+  {#snippet chartActions()}
+    <Inline gap="2" align="center">
+      <ChartControls model={session.model} chart={session.chart} drawnAxes={outputs.drawnAxes} part="type" />
+      <ExportImageDialog
+        chart={outputs.chart}
+        model={session.model}
+        chartType={session.chart.type}
+        runs={outputs.drawnRuns}
+        unitSystem={session.unitSystem}
+        onfailed={() => tab.raiseNotice("imageFailed")}
+      />
+    </Inline>
+  {/snippet}
 
-          {#if outputs.chart}
-            <Stack gap="2">
-              <PlotlyChart spec={outputs.chart} />
-              <ChartLegend entries={outputs.chart.legend} />
-            </Stack>
-          {/if}
-        </Stack>
-      </section>
-    </Grid>
-  </Stack>
-</main>
-
-<style>
-  main {
-    padding: 1.5rem;
-  }
-
-  h1 {
-    font-size: 1.25rem;
-    font-weight: 600;
-  }
-
-  h2 {
-    font-size: 1rem;
-    font-weight: 600;
-  }
-
-  nav a {
-    color: var(--muted-foreground);
-    text-decoration: none;
-  }
-
-  nav a[aria-current="page"] {
-    color: var(--foreground);
-    font-weight: 500;
-  }
-</style>
+  {#snippet chart()}
+    <Stack gap="4">
+      <ChartControls model={session.model} chart={session.chart} drawnAxes={outputs.drawnAxes} part="axes" />
+      {#if outputs.chart}
+        <div class="chart-area">
+          <PlotlyChart spec={outputs.chart} />
+          <ChartLegend entries={outputs.chart.legend} />
+        </div>
+      {/if}
+    </Stack>
+  {/snippet}
+</PageFrame>

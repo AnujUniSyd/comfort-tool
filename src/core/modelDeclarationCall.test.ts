@@ -3,18 +3,19 @@
  * two ways the compiler cannot see: each quantity key of the params object has
  * to carry that quantity's own number (ADR-0002 decision 34); and each option
  * has to sit under the key its `key` names, since the key and the property are
- * spelled separately in the declaration (decision 36). Split out of
- * `modelDeclarationRun.test.ts` when that file passed ADR §6's line band; what
- * `run` returns stays there.
+ * spelled separately in the declaration (decision 36). What `run` returns is
+ * the sibling `modelDeclarationRun.test.ts`'s.
  */
 import { describe, expect, it, vi } from "vitest";
-import { pmv_ppd_ashrae, pmv_ppd_iso, Standard } from "jsthermalcomfort";
+import { pmv_ppd_ashrae, pmv_ppd_iso } from "jsthermalcomfort";
 import { registeredModels } from "$lib/models";
+import { pmvPpdAshrae } from "$lib/models/pmvPpdAshrae";
 import { pmvPpdIso } from "$lib/models/pmvPpdIso";
-import { defaultSlot } from "./declarationTestSlots";
-import { optionsReader, resolveQuantities, toLibraryInputs, valuesReader } from "./libraryInputs";
+import { optionsReader, resolveQuantities, valuesReader } from "./libraryInputs";
 import type { OptionSpec, OptionsReader, RegisteredModel, Values } from "./modelDeclaration";
-import { quantityFor, type Quantity } from "./quantities";
+import { runOn } from "./modelRun";
+import { DEFAULT_ATMOSPHERIC_PRESSURE, quantityFor, type Quantity } from "./quantities";
+import { startingSlot } from "./slot";
 
 /** The arguments of the last call of each library function, by export name. */
 const lastCalls = vi.hoisted(() => new Map<string, readonly unknown[]>());
@@ -41,39 +42,8 @@ vi.mock("jsthermalcomfort", async (importOriginal) => {
   );
 });
 
-const airSpeedControl: OptionSpec = {
-  key: "airspeed_control",
-  label: "Occupants control the air speed",
-  default: false,
-};
-
-/**
- * A model that reads an option through `run`'s second reader, as PMV
- * (ASHRAE 55) will. Named after the function it calls, so the recording above
- * can be found under that name.
- */
-const readsAnOption = {
-  ...pmvPpdIso,
-  info: { ...pmvPpdIso.info, name: "pmv_ppd_ashrae" },
-  standard: Standard.ashrae_55_2023,
-  options: [airSpeedControl],
-  run: (values, options) =>
-    pmv_ppd_ashrae({
-      tdb: values.tdb,
-      tr: values.tr,
-      vr: values.vr,
-      rh: values.rh,
-      met: values.met,
-      clo: values.clo,
-      wme: 0,
-      standard: Standard.ashrae_55_2023,
-      limit_inputs: false,
-      round_output: false,
-      // The cooling effect logs when it assumes 0; nothing here reads the log.
-      suppress_warnings: true,
-      airspeed_control: options(airSpeedControl),
-    }),
-} satisfies RegisteredModel;
+/** The option PMV (ASHRAE 55) reads through `run`'s second reader. */
+const [airSpeedControl] = pmvPpdAshrae.options;
 
 /** The params object of the last call `model.run` made to the library function it is named after. */
 function receivedParams(model: RegisteredModel, values: Values, options: OptionsReader): Readonly<Record<string, unknown>> {
@@ -96,9 +66,9 @@ function receivedParams(model: RegisteredModel, values: Values, options: Options
  * compare and is skipped; the rest are the ones the compiler cannot pair.
  */
 function mispairedKeys(model: RegisteredModel): { checked: string[]; mispaired: string[] } {
-  const slot = defaultSlot(model);
+  const slot = startingSlot(model);
   const distinct = new Map<Quantity, number>(
-    [...resolveQuantities(slot, model)].map(([quantity, value], index) => [quantity, value + (index + 1) / 1000]),
+    [...resolveQuantities(slot, model, DEFAULT_ATMOSPHERIC_PRESSURE)].map(([quantity, value], index) => [quantity, value + (index + 1) / 1000]),
   );
   expect(new Set(distinct.values()).size, `${model.info.name} distinct values`).toBe(distinct.size);
   const params = receivedParams(model, valuesReader(distinct), optionsReader(slot.options));
@@ -124,11 +94,10 @@ describe("run's params object", () => {
   });
 
   it("catches two quantities in each other's place, which is all the compiler cannot see", () => {
-    // Proven red 2026-09-25: the same swap in the real declaration made the
-    // registry test above fail on `pmv_ppd_iso`'s `tdb` and `tr` and nothing
-    // else — not `npm run check`, because both keys are numbers. Written out
-    // rather than wrapped: spreading `values` would read every quantity, and throw
-    // on the first one the slot does not hold.
+    // The same swap in the real declaration is what the registry test above
+    // catches and `npm run check` does not, because both keys are numbers.
+    // Written out rather than wrapped: spreading `values` would read every
+    // quantity, and throw on the first one the slot does not hold.
     const swapped = {
       ...pmvPpdIso,
       run: (values: Values) =>
@@ -149,7 +118,7 @@ describe("run's params object", () => {
   });
 
   it("pairs every quantity for a model that also reads an option", () => {
-    expect(mispairedKeys(readsAnOption)).toEqual({ checked: ["tdb", "tr", "vr", "rh", "met", "clo"], mispaired: [] });
+    expect(mispairedKeys(pmvPpdAshrae)).toEqual({ checked: ["tdb", "tr", "vr", "rh", "met", "clo"], mispaired: [] });
   });
 });
 
@@ -181,10 +150,10 @@ export function valuesTypeProof(values: Values, options: OptionsReader): void {
  * model's defaults. A positional argument that differs is named by its index.
  */
 function kwargsFedBy(model: RegisteredModel, option: OptionSpec): string[] {
-  const slot = defaultSlot(model);
+  const slot = startingSlot(model);
   const argumentsWith = (value: boolean): readonly unknown[] => {
     lastCalls.delete(model.info.name);
-    model.run(toLibraryInputs(slot, model), optionsReader(new Map(slot.options).set(option, value)));
+    runOn({ ...slot, options: new Map(slot.options).set(option, value) }, model, DEFAULT_ATMOSPHERIC_PRESSURE);
     const args = lastCalls.get(model.info.name);
     if (!args) {
       throw new Error(`${model.info.name}'s run did not call the library function it is named after`);
@@ -219,15 +188,15 @@ describe("an option's key", () => {
   });
 
   it("is found where the run puts it", () => {
-    expect(kwargsFedBy(readsAnOption, airSpeedControl)).toEqual(["airspeed_control"]);
+    expect(kwargsFedBy(pmvPpdAshrae, airSpeedControl)).toEqual(["airspeed_control"]);
   });
 
   it("catches a key spelled differently from the kwarg, which is all the compiler cannot see", () => {
     const misspelt: OptionSpec = { ...airSpeedControl, key: "airspeed_contol" };
     const declared = {
-      ...readsAnOption,
+      ...pmvPpdAshrae,
       options: [misspelt],
-      run: (values: Values, options: OptionsReader) => readsAnOption.run(values, () => options(misspelt)),
+      run: (values: Values, options: OptionsReader) => pmvPpdAshrae.run(values, () => options(misspelt)),
     } satisfies RegisteredModel;
     expect(kwargsFedBy(declared, misspelt)).not.toEqual([misspelt.key]);
   });

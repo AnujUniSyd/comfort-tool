@@ -45,11 +45,32 @@ const temporaryLibraryBoundary = {
   message: "src/temporary-library/ imports jsthermalcomfort and its own files only (ADR-0002 decision 24).",
 };
 
+// ADR-0002 decision 40: a model is added, changed or removed in its own
+// declaration file and one registry line, so one declaration importing
+// another would make that model's file a dependency of the other's. Two
+// declarations that share inputs copy them. A declaration may not import the
+// registry either: that makes every other declaration its dependency and
+// closes a cycle. The registry imports every declaration by design and is
+// exempt below. Patterns see the import string, not the resolved file, so any
+// path through a `models` segment is barred, and a file in a subdirectory
+// also may not climb one level with `../`, which lands back in src/models/.
+const declarationMessage =
+  "A declaration never imports another declaration, nor the registry; copy what they share (ADR-0002 decision 40).";
+const declarationBoundary = {
+  group: [".", "./", "./**", "**/models", "**/models/**"],
+  message: declarationMessage,
+};
+const declarationSubdirectoryBoundary = {
+  regex: "^\\.\\.(/([^.]|$)|$)",
+  message: declarationMessage,
+};
+
 // ADR §4.4: the moment the chart component knows what a model is, every new
-// model starts needing an edit here.
+// model starts needing an edit here. The chart's request names a model and a
+// slot, so it is the builders' and not the component's (ADR-0002 decision 50).
 const chartBoundary = {
-  group: ["**/models/**", "**/state/**", "jsthermalcomfort"],
-  message: "Chart components consume a ChartSpec and nothing else.",
+  group: ["**/models/**", "**/state/**", "jsthermalcomfort", "**/charts/chartRequest"],
+  message: "The chart adapter consumes a ChartSpec, or an ImageDescription that holds one, and nothing else.",
 };
 
 // ADR §6: Svelte 4 syntax an LLM reaches for by habit. The autofixer catches
@@ -90,14 +111,17 @@ const untrackSyntax = [
 ];
 
 // Narrower than it looks: in state/ an $effect exists to synchronise something
-// outside Svelte, and there is nothing outside Svelte in that directory. In ui/
-// the same assignment is often legitimate (writing to a DOM node), so the rule
-// is not applied there.
+// outside Svelte, and there is nothing outside Svelte in that directory, nor in
+// a page, which composes state and components and talks to the router through
+// navigation.ts (ADR-0002 decision 43). In ui/ the same assignment is often
+// legitimate (writing to a DOM node), so the rule is not applied there. The
+// rule is syntactic: it sees an assignment written inside the effect, not one
+// made by a function the effect calls, which stays with review.
 const effectPuritySyntax = [
   {
     selector: "CallExpression[callee.name='$effect'] AssignmentExpression",
     message:
-      "An $effect in state/ must not assign. Derived values belong in $derived (ADR §6, Svelte Best practices).",
+      "An $effect in state/ or in a page must not assign. Derived values belong in $derived (ADR §6, Svelte Best practices).",
   },
 ];
 
@@ -120,6 +144,16 @@ const tailwindSyntax = [
       "SvelteAttribute[key.name='class'] SvelteLiteral[value=/(^|\\s)-?(p|m|w|h|gap|flex|grid|space|text|bg|border|rounded|shadow|items|justify)[xytrbl]?-/]",
     message:
       "Tailwind utilities belong in ui/primitives/ or ui/layout/. Compose with Stack/Grid/Inline instead.",
+  },
+];
+
+// ADR-0002 decision 65: appearance lives in tokens, primitives and layout
+// components, so a business component carries no <style> block.
+const styleBlockSyntax = [
+  {
+    selector: "SvelteStyleElement",
+    message:
+      "No <style> in a business component: use a primitive, a layout component, or a semantic class in app.css (ADR-0002 decision 65).",
   },
 ];
 
@@ -151,6 +185,24 @@ export default [
       "no-restricted-syntax": ["error", ...wireStringSyntax, ...untrackSyntax, ...constantCaseSyntax],
     },
   },
+  {
+    // The browser tests and their config sit outside the app's boundaries.
+    // Playwright neither type-checks them nor waits for a call the test forgot
+    // to await, so the one typed rule here catches the missing `await`.
+    files: ["tests/**/*.ts", "playwright.config.ts"],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
+    plugins: { "@typescript-eslint": tsPlugin },
+    rules: {
+      ...tsPlugin.configs["flat/recommended"][2].rules,
+      "no-undef": "off",
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-floating-promises": "error",
+    },
+  },
   ...svelte.configs["flat/recommended"].map((config) => ({
     ...config,
     files: ["src/**/*.svelte"],
@@ -170,6 +222,7 @@ export default [
         ...legacySvelteSyntax,
         ...wireStringSyntax,
         ...tailwindSyntax,
+        ...styleBlockSyntax,
         ...untrackSyntax,
       ],
     },
@@ -190,7 +243,8 @@ export default [
     },
   },
   {
-    // Generated primitives and the layout wrappers are where Tailwind lives.
+    // Generated primitives and the layout wrappers are where Tailwind lives,
+    // and the only components that may carry a <style> block.
     files: ["src/ui/primitives/**/*.svelte", "src/ui/layout/**/*.svelte"],
     rules: {
       "no-restricted-syntax": ["error", ...legacySvelteSyntax, ...wireStringSyntax],
@@ -212,10 +266,42 @@ export default [
     },
   },
   {
+    // Pages, like state/, have nothing outside Svelte to synchronise: the
+    // address reaches the session through the router's after-load hook, not
+    // an $effect (ADR-0002 decision 43). This block catches only an assignment
+    // written inside a page's effect, as effectPuritySyntax says.
+    files: ["src/routes/**/*.svelte"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        ...legacySvelteSyntax,
+        ...wireStringSyntax,
+        ...tailwindSyntax,
+        ...styleBlockSyntax,
+        ...untrackSyntax,
+        ...effectPuritySyntax,
+      ],
+    },
+  },
+  {
     // Model declarations bind `run: io.<model>` and read label/limits off the
     // library model function. Compute is synchronous and calls `run` through
     // the declaration, so no other directory names one (ADR-0002 decision 29).
+    // The registry is the one file here that imports declarations.
     files: ["src/models/**/*.ts"],
+    ignores: ["src/models/index.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [declarationBoundary] }],
+    },
+  },
+  {
+    files: ["src/models/*/**/*.ts"],
+    rules: {
+      "no-restricted-imports": ["error", { patterns: [declarationBoundary, declarationSubdirectoryBoundary] }],
+    },
+  },
+  {
+    files: ["src/models/index.ts"],
     rules: {
       "no-restricted-imports": "off",
     },
@@ -237,16 +323,10 @@ export default [
   },
   {
     // After the test block on purpose: the fence holds for the directory's
-    // tests too, since they move upstream with it. Only the tests may name a
-    // library model function, to build the PMV closure the zone takes.
+    // tests too, since they move upstream with it. The model-function rule
+    // does not: this is library code, and calls a model as the library's own
+    // functions do (ADR-0002 decision 24).
     files: ["src/temporary-library/**/*.ts"],
-    ignores: ["src/temporary-library/**/*.test.ts"],
-    rules: {
-      "no-restricted-imports": ["error", { ...libraryModelImports, patterns: [temporaryLibraryBoundary] }],
-    },
-  },
-  {
-    files: ["src/temporary-library/**/*.test.ts"],
     rules: {
       "no-restricted-imports": ["error", { patterns: [temporaryLibraryBoundary] }],
     },

@@ -4,7 +4,7 @@ const baseUrl = "http://127.0.0.1:5173";
 
 export default defineConfig({
   testDir: "./tests/browser",
-  testMatch: "**/*.visual.ts",
+  testMatch: "**/*.{visual,behaviour}.ts",
   fullyParallel: false,
   workers: 1,
   retries: 0,
@@ -29,9 +29,9 @@ export default defineConfig({
     baseURL: baseUrl,
     browserName: "chromium",
     colorScheme: "light",
+    contextOptions: { reducedMotion: "reduce" },
     deviceScaleFactor: 1,
     locale: "en-US",
-    reducedMotion: "reduce",
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
     viewport: { width: 1920, height: 1080 },

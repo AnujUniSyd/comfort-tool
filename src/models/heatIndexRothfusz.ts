@@ -21,25 +21,16 @@ export const heatIndexRothfusz = {
     { quantity: q.rh, value: 50 },
   ],
   options: [],
-  relativeAirSpeed: false,
   // Both quantities declared, because the applicability fallback can answer for
   // neither: `rh` has no bound at all and `tdb`'s is `min`-only (ADR §4.4).
   axisRanges: [
     { quantity: q.tdb, min: 20, max: 50 },
     { quantity: q.rh, min: 0, max: 100 },
   ],
-  table: [q.hi, q.stress_category],
-  charts: [
-    // The scanned number is `hi`, cut by the same stress-category bins the
-    // kernel classifies `stress_category` with.
-    // `HEAT_INDEX_ROTHFUSZ_INFO.outputs.stress_category.classifier` is the same
-    // object but types as possibly undefined, and a declaration carries no cast
-    // (ADR-0002 decision 27).
-    {
-      type: chartType.dynamic,
-      axes: { x: q.tdb, y: q.rh },
-      output: q.hi,
-      bands: HEAT_INDEX_STRESS_CATEGORY_BINS,
-    },
-  ],
+  table: [q.hi],
+  // The scanned number is `hi`, cut by the same stress-category bins the
+  // kernel classifies `stress_category` with. No Comfort zones: the model has
+  // no standard to draw a limit on it.
+  scan: { output: q.hi, classifier: HEAT_INDEX_STRESS_CATEGORY_BINS },
+  charts: [{ type: chartType.dynamic, axes: { x: q.tdb, y: q.rh } }],
 } satisfies RegisteredModel;

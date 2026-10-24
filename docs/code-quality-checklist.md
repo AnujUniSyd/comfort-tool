@@ -28,15 +28,17 @@ checklist line below turns out to be mechanisable, it should move up into the ma
 |---|---|---|
 | `core/` imports no `svelte` / `state` / `ui` / `routes` | eslint `coreBoundary` | ADR §5 |
 | `ui/charts/` imports no model, state or `jsthermalcomfort` | eslint `chartBoundary` | ADR §4.4 |
-| Library model functions imported only in `models/` | eslint `libraryModelImports` | ADR §3 |
+| Library model functions imported only in `models/` and `temporary-library/` | eslint `libraryModelImports` | ADR §3 |
 | No quantity wire string outside `shareLink.ts` | eslint `wireStringSyntax` | ADR §4.0, DRY |
 | Tailwind utilities only in `ui/primitives/` and `ui/layout/` | eslint `tailwindSyntax` | ADR §2 |
+| No `<style>` block outside `ui/primitives/` and `ui/layout/` | eslint `styleBlockSyntax` | ADR-0002 decision 65 |
 | No `export let` / `$:` / `on:` / `<slot>` / `<svelte:component>` | eslint `legacySvelteSyntax` | Svelte Best practices |
 | No `any` | eslint `no-explicit-any` | TS Do's and Don'ts |
 | No `enum` / `namespace` / parameter properties | `erasableSyntaxOnly` | ADR §6 |
 | **No assignment to state inside `$effect`; no `untrack`** | eslint `effectPurity` | Svelte Best practices |
 | **Scalar module constants are `CONSTANT_CASE`** | eslint `constantCase` | ADR §6, Google TS Style Guide |
-| Types check, tests pass, build succeeds | `npm run check` / `test` / `build` | — |
+| Every Playwright call in a browser test is awaited | eslint `no-floating-promises` | Playwright Best Practices |
+| Types check (`src/`, `tests/`, the Playwright config), tests pass, build succeeds | `npm run check` / `test` / `build`; `test:browser` where AGENTS.md's done line says | — |
 
 ## Human pass
 
@@ -48,8 +50,8 @@ Read the diff once against each of these. They are judgement calls; none of them
 - No abbreviation formed by deleting letters. Library quantity keys (`tdb`, `vr`) are the standing exception — they are the
   library's vocabulary, not ours. *(Google TS Style Guide: "Do not use abbreviations that are ambiguous or unfamiliar to
   readers outside your project, and do not abbreviate by deleting letters within a word.")*
-- Functions start with a verb. No `engine` / `manager` / `helper` / `utils` as a file name.
-- Quantity display names come from `Quantity.label` — never written in the app.
+- A function that acts or answers a question starts with a verb; one that only returns a value is named for what it returns, a noun phrase (`violationRows`), with a preposition where the name must say what it is read from or made of (`…For`, `…Of`, `with…` or any other, as in `modelBySegment`); a conversion is `to…`, a callback `on…` after its event (ADR-0002 decision 41). No `engine` / `manager` / `helper` / `utils` as a file name.
+- Quantity display names come from `Quantity.label` — never written in the app. The one exception is the zone legend's `|PMV|` (ADR-0002 decision 44).
 
 **Single source of truth**
 
@@ -63,10 +65,15 @@ Read the diff once against each of these. They are judgement calls; none of them
 
 - Is a type annotation adding meaning, or restating what inference already knows? *(Google TS Style Guide: rely on
   inference; annotate where it aids readability.)*
-- Do mapped and conditional types still read plainly? `Omit<RegisteredModel, "run">` in `defineModel` and the two
-  `Extract<ChartDeclaration, …>` aliases are the current ones. *("A little bit of repetition or verbosity is often much
+- Do mapped and conditional types still read plainly? `Omit<RegisteredModel, "run">` in `defineModel`, the three
+  `Extract<DeclaredChart, …>` aliases and `RegisteredModel`'s union over the scan are the current ones. *("A little bit of repetition or verbosity is often much
   cheaper than the long term cost of complex type expressions.")*
 - Callbacks whose return value is ignored are typed `void`, not `any`.
+
+**Precision**
+
+- Does a test of a number a person can see assert at the shown precision in SI (`toBeCloseTo(x, 2)`, or `formatNumber` equality)? Only a test of the app's own arithmetic (`core/units.ts`, `src/temporary-library/`) pins tighter, because it verifies a formula, not a precision (ADR-0002 decision 56).
+- Is anything rounded on its way into a slot, or compared against a bound exactly? A slot holds full-precision SI; the gate and the range text judge and read at the formatter's constant, through `isShownBeyond`, and nowhere else is a precision written. An exact comparison that picks a direction for a row the gate already listed, as a "Yes" picks its end, is not a verdict and stands.
 
 **Svelte**
 
@@ -79,7 +86,7 @@ Read the diff once against each of these. They are judgement calls; none of them
 - Does `src/` still match the tree in ADR §5, and does each file hold one concept?
 - Is a file outside the 100–400 line band, and if so does it earn it?
 - Was anything abstracted for a second caller that does not exist? The one sanctioned exception is recorded in the plan:
-  the `zones` source added in Phase 3.5 for Phase 4's Adaptive.
+  the `zones` source added in Phase 3.5 for Phase 4's Adaptive, the adaptive chart's `limits` since ADR-0002 decision 62.
 
 ## Not used as criteria
 

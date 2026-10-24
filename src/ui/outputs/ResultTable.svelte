@@ -1,146 +1,138 @@
 <script lang="ts">
-  import { warningFor, type ViolationRow } from "$lib/core/applicability";
-  import { colorForBand } from "$lib/core/bandPalette";
-  import { resultValue } from "$lib/core/libraryInputs";
-  import type { ModelResult, RegisteredModel } from "$lib/core/modelDeclaration";
-  import { formatNumber } from "$lib/core/numberFormat";
-  import { quantityFor, type Quantity } from "$lib/core/quantities";
-  import { standards } from "$lib/core/standard";
-  import { displayUnitFor } from "$lib/core/units";
+  import TriangleAlertIcon from "@lucide/svelte/icons/triangle-alert";
+  import { splitViolations, warningFor } from "$lib/core/applicability";
+  import { chartInk } from "$lib/core/bandPalette";
+  import type { RegisteredModel } from "$lib/core/modelDeclaration";
+  import { classifiedOutputs, formatResultCell } from "$lib/core/resultCell";
+  import { standardCaptionFor } from "$lib/core/standard";
   import type { UnitSystem } from "$lib/core/unitSystem";
+  import type { SlotOutputs } from "$lib/state/compute.svelte";
   import { copy } from "$lib/text/copy";
+  import Inline from "$lib/ui/layout/Inline.svelte";
+  import Stack from "$lib/ui/layout/Stack.svelte";
+  import * as Alert from "$lib/ui/primitives/alert";
   import * as Table from "$lib/ui/primitives/table";
 
   interface Props {
     model: RegisteredModel;
-    /** The slot's last valid result; `null` before the first run. */
-    result: ModelResult | null;
+    /** One row per compared slot, in slot order. */
+    rows: readonly SlotOutputs[];
     unitSystem: UnitSystem;
-    slotName: string;
-    outOfRange: boolean;
-    violations: readonly ViolationRow[];
+    /** While Compare is on, a row wears its slot's hue and the kept rows' note names the row it is about. */
+    compare: boolean;
+    /** The id of the Results heading, which names the table's scroll region (ADR-0002 decision 70, rule 2). */
+    labelledby: string;
   }
 
-  let { model, result, unitSystem, slotName, outOfRange, violations }: Props = $props();
-
-  interface ClassifiedOutput {
-    readonly quantity: Quantity;
-    readonly category: string | number;
-    readonly color: string | undefined;
-  }
+  let { model, rows, unitSystem, compare, labelledby }: Props = $props();
 
   // ADR §4.3: the Compliance column appears only when the model has a
-  // classified output or a broken output row. Colour a category by its
-  // position in the output's own classifier (ADR-0002 decision 8).
-  // An output-role violation also opens the column: a PMV of 2.4 is shown, with
-  // the row it broke as its caveat.
-  const classified = $derived<readonly ClassifiedOutput[]>(
-    result
-      ? Object.entries(model.info.outputs).flatMap(([key, variable]) => {
-          const classifier = variable.classifier;
-          const quantity = classifier ? quantityFor(key) : undefined;
-          if (!classifier || !quantity) {
-            return [];
-          }
-          const category = resultValue(result, quantity);
-          if (category === undefined) {
-            return [];
-          }
-          return [{ quantity, category, color: colorForBand(classifier, category) }];
-        })
-      : [],
+  // classified output or a broken output row. An output-role violation also
+  // opens the column: a PMV of 2.4 is shown, with the row it broke as its caveat.
+  const tableRows = $derived(
+    rows.map((row) => ({
+      row,
+      classified: classifiedOutputs(model, row.result),
+      caveats: splitViolations(row.violations).outputs,
+    })),
   );
-  const caveats = $derived(violations.filter((violation) => violation.role === "output"));
-  const hasCompliance = $derived(classified.length > 0 || caveats.length > 0);
-  const standardEntry = $derived(model.standard ? standards.find((entry) => entry.id === model.standard) : undefined);
+  const hasCompliance = $derived(tableRows.some((entry) => entry.classified.length > 0 || entry.caveats.length > 0));
+  const uncalculatedRows = $derived(rows.filter((row) => row.notCalculated));
+  const standardCaption = $derived(model.standard ? standardCaptionFor(model.standard) : undefined);
 
-  function cellText(quantity: Quantity): string {
-    const value = result ? resultValue(result, quantity) : undefined;
-    if (typeof value !== "number" || !Number.isFinite(value)) {
-      return copy.notAvailable;
-    }
-    const unit = displayUnitFor(quantity, unitSystem);
-    const text = formatNumber(unit.fromSi(value));
-    return unit.symbol ? `${text} ${unit.symbol}` : text;
+  function notCalculatedNote(row: SlotOutputs): string {
+    const note = row.result ? copy.outOfRangeKeptResult : copy.outOfRangeEmptyResult;
+    return compare ? copy.slotNote(row.badge.name, note) : note;
   }
 </script>
 
-<div class="result-table">
-  <Table.Root>
-    <Table.Header>
-      <Table.Row>
-        <Table.Head>{copy.inputColumn}</Table.Head>
-        {#if hasCompliance}
-          <Table.Head>{copy.complianceColumn}</Table.Head>
-        {/if}
-        {#each model.table as quantity (quantity)}
-          <Table.Head>{quantity.label}</Table.Head>
-        {/each}
-      </Table.Row>
-    </Table.Header>
-    <Table.Body>
-      <Table.Row>
-        <Table.Cell>{slotName}</Table.Cell>
-        {#if hasCompliance}
-          <Table.Cell>
-            {#each classified as entry (entry.quantity)}
-              <span class="band">
-                <span class="swatch" style:background-color={entry.color}></span>
-                {entry.quantity.label}: {entry.category}
-              </span>
+<!-- A slot's swatch is its chart marker's. -->
+{#snippet slotSwatch(row: SlotOutputs)}
+  <span class="swatch swatch-marker" style:--swatch-color={chartInk.marker(row.badge.hue)}></span>
+{/snippet}
+
+<Stack gap="2">
+  <!-- The table scrolls inside its region, not the page, by keyboard too (ADR-0002 decision 70): a scroll region
+       is focusable so the arrow keys reach the columns to the right, which Svelte's rule does not except. -->
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+  <div class="table-scroll" role="region" tabindex="0" aria-labelledby={labelledby}>
+    <Table.Root class="result-table">
+      <Table.Header>
+        <Table.Row>
+          <Table.Head>{copy.inputColumn}</Table.Head>
+          {#if hasCompliance}
+            <Table.Head>{copy.complianceColumn}</Table.Head>
+          {/if}
+          {#each model.table as quantity (quantity)}
+            <Table.Head class="value">{quantity.label}</Table.Head>
+          {/each}
+        </Table.Row>
+      </Table.Header>
+      <Table.Body>
+        {#each tableRows as { row, classified, caveats } (row)}
+          <!-- A row kept from an earlier run is marked, so its numbers read as not current (decision 73, rule 9). -->
+          <Table.Row data-kept={row.notCalculated || undefined}>
+            <Table.Cell>
+              {#if compare}
+                <span class="swatch-label">
+                  {@render slotSwatch(row)}
+                  {row.badge.name}
+                </span>
+              {:else}
+                {row.badge.name}
+              {/if}
+            </Table.Cell>
+            {#if hasCompliance}
+              <Table.Cell>
+                <Inline gap="2">
+                  {#each classified as entry (entry.quantity)}
+                    <span class="swatch-label">
+                      {#if entry.color}
+                        <span class="swatch swatch-fill" style:--swatch-color={entry.color}></span>
+                      {/if}
+                      {entry.quantity.label}: {entry.category}
+                    </span>
+                  {/each}
+                  {#each caveats as violation (violation)}
+                    <span class="caption caveat">{warningFor(violation, unitSystem)}</span>
+                  {/each}
+                </Inline>
+              </Table.Cell>
+            {/if}
+            {#each model.table as quantity (quantity)}
+              <Table.Cell class="value">{formatResultCell(row.result, quantity, unitSystem)}</Table.Cell>
             {/each}
-            {#each caveats as violation (violation)}
-              <span class="band caveat">{warningFor(violation, unitSystem)}</span>
-            {/each}
-          </Table.Cell>
-        {/if}
-        {#each model.table as quantity (quantity)}
-          <Table.Cell>{cellText(quantity)}</Table.Cell>
+          </Table.Row>
         {/each}
-      </Table.Row>
-    </Table.Body>
-    {#if outOfRange || standardEntry}
-      <Table.Caption>
-        {#if outOfRange}<span>{result ? copy.outOfRangeKeptResult : copy.outOfRangeEmptyResult}</span>{/if}
-        {#if standardEntry}
-          <span class="edition">{copy.standardCaption(standardEntry.displayName, standardEntry.year)}</span>
-        {/if}
-      </Table.Caption>
-    {/if}
-  </Table.Root>
-</div>
+      </Table.Body>
+    </Table.Root>
+  </div>
 
-<style>
-  .result-table :global(th) {
-    font-size: 0.7rem;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  .band {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4em;
-    margin-right: 0.75em;
-    white-space: nowrap;
-  }
-
-  .swatch {
-    display: inline-block;
-    width: 0.75em;
-    height: 0.75em;
-    border: 1px solid var(--border);
-    border-radius: 50%;
-  }
-
-  .caveat {
-    color: var(--muted-foreground);
-    font-size: var(--font-size-caption);
-    white-space: normal;
-  }
-
-  .edition:not(:first-child) {
-    margin-left: 0.75em;
-  }
-</style>
+  <!-- The standard's caption, then the kept rows' note under it, so the note's coming and going moves the caption
+       nothing. The note is the one place the page asks the person to act: the generated alert in its destructive
+       variant (decision 73, rule 9). -->
+  {#if uncalculatedRows.length > 0 || standardCaption}
+    <Stack gap="2">
+      {#if standardCaption}
+        <span class="caption">{standardCaption}</span>
+      {/if}
+      {#if uncalculatedRows.length > 0}
+        <Alert.Root variant="destructive">
+          <TriangleAlertIcon />
+          <Alert.Title>
+            <Inline gap="4">
+              {#each uncalculatedRows as row (row)}
+                <span class="swatch-label">
+                  {#if compare}
+                    {@render slotSwatch(row)}
+                  {/if}
+                  {notCalculatedNote(row)}
+                </span>
+              {/each}
+            </Inline>
+          </Alert.Title>
+        </Alert.Root>
+      {/if}
+    </Stack>
+  {/if}
+</Stack>

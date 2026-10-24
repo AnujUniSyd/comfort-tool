@@ -34,6 +34,172 @@ Calculation logic moves out into the forked `jsthermalcomfort` (`typescript` bra
 
 > **2026-09-26 — position: the app is on the library's v2 shape.** The library v2 migration pass landed on `rewrite/v1` as five commits (`.scratch/library-v2-migration/`): 01 `e47b86c` `run` calls every model with one params object, 02 `578cd54` a model's name is read from its model info, 03 `4812b99` and its follow-up `b64c21b` the zone solver takes one params object with `pmv_limit` required and the reproduced-defect switch deleted, 04 `b37eb5f` the PMV (ISO 7730) page draws categories A, B and C and prints the room's category. It consumes `jsthermalcomfort` on `feat/v2-typescript-setup` through `cee6893`, the library's v1-models parity tickets 01–12: one params object on every v1 model, `ModelInfo.name`, `warnings` rows on all five models, `PMV_COMPLIANCE_INTERVAL_ASHRAE`, `utci`'s `round_output`, and `pmv_ppd_iso`'s `category` with `PMV_CATEGORY_BINS_ISO`. Against the rebuilt package before the pass, `npm run check` reported 11 errors and 62 tests failed; after it the four scripts are green, and the test count went 179 → 176 → 174 → 172 → 180 across the four tickets, down by exactly the deleted tests and up by ticket 04's eight. ADR-0002 decisions 8, 24, 30, 31, 34, 35 and 36 carry dated revision notes; the library-boundary spec's `ModelInfo` and model-function gap tables are marked row by row, every row closed with its library commit but two: the classifier pairing stays in the app, and the psychrometric inverses still round; one library request, that `ClassifierBins` document its final edge as a sentinel, is recorded in the library's queue. **Phase 4b resumes at its ticket 03.**
 
+> **2026-09-27 — position, Phase 4b passed**: PMV (ASHRAE 55) and Adaptive (ASHRAE 55) share the Standard page with PMV (ISO 7730) (`.scratch/phase-4b/`). Upstream first, `suppress_warnings` as `76abdab` on `feat/v2-typescript-setup` (ticket 01). Then the app's prerequisites, each its own commit: the option contract `fcd4050`, with `751c6d9`, `ec62fd6` and `5444d7b` (ADR-0002 decision 36); the polygons chart on locked axes with the operative mean `b31e195` (decision 37); the registry-wide checks restated for it and the silence test `acc6946` (decision 38); rows on one input merged `2ee5278`; the quantity rows and the `yesNo` kind `00ea246`; Adaptive's band geometry in the temporary library `b97194e`. **The acceptance passed on its own terms for both models**: PMV (ASHRAE 55) `58ba1bb` and Adaptive (ASHRAE 55) `c1ef5e1` are each **two files** (`git diff --stat` at the declaration file and `src/models/index.ts`'s import and array entry, as Heat Index's was), and **the test count did not move**, 205 → 205 and 211 → 211, the six between being the geometry's own tests; the four scripts are green. `0f8032c` then dropped Adaptive's two axis ranges nothing reads, one file. **The timing**: PMV (ASHRAE 55)'s 51×51 dynamic chart, `dynamicSpec` on its declared `tdb × v` axes at its defaults, timed in the browser (Chrome 154, Vite dev server, no throttling) three times, 111, 90.3 and 90.5 ms, **median 90.5 ms**, against 11–13 ms for ISO's on the same page; decision 29 stands. The three models were walked end to end in the running app, both ways by link and, within ASHRAE 55, by the select (which lists the current standard's models only), with a switch that breaks Applicability asked and declined, a new tab, typed addresses, the back button into each model, SI and IP, mouse and keyboard, and the console clean throughout (ticket 10's comments). The Phase 4b prerequisite's wording is corrected to what shipped: neither Model info carries a compliance interval or `offsets`, and the app needs neither. ADR-0002 decision 38 gains a note that its "both models registered today" no longer describes the registry. Ticket 11, the switch into operative entry weighs by ISO on every page, is open and needs triage. **Phase 4b is closed; next is the whole-codebase review between Phase 4b and Phase 5**, whose input is ticket 10's structure findings.
+
+> **2026-09-28 — position, the review's code session is closed**: item 1 of the review between Phase 4b and Phase 5 is done on `review/after-4b` (`.scratch/review-after-4b/`). The whole-codebase review read `git diff main...HEAD` and gave 156 findings, decided in 14 rounds with Proposals 1 to 35. Tickets 01 to 53 landed them, one commit each (`f7e3d86` to `da548c9`), and wrote ADR-0002 decisions 40 to 46; atmospheric pressure stays in v1 as Phase 4c. A second review then read the run's own diff against `rewrite/v1` and gave 25 findings (`branch-review.md`). Round 15 and Proposals 36 to 38 decided them, and tickets 55 to 59 landed (`876d62d` to `d493dd7`): decision 41 is widened to the names the code has, and nine sentences written ahead of their code say what landed. The four scripts are green at 302 tests. The three models were walked in the running app in SI and IP, by link, by the back and forward buttons and by typed address, with the console clean. What was left on purpose is in `deferred.md`, by destination. **Next: review item 2, the architecture session, which takes `deferred.md` as its input.**
+
+> **2026-09-29 — position, Phase 4c done**: items 2 and 3 of the review between Phase 4b and Phase 5 are done (see that section), and Phase 4c landed on `rewrite/v1` (`.scratch/atmospheric-pressure/`). The decisions came first, as `c2bc39c` (ADR-0002 decision 49, decision 45 amended). Four tickets followed, one commit each: 01 `f34f05f` `p_atm` is a quantity with its own kind, 02 `7239c30` the session holds the pressure and a humidity ratio follows it, 03 `00a81b8` the psychrometric chart is drawn at it, 04 `39a748a` a pressure out of range stops the calculation. Ticket 05 read the documents against the code: decision 49 and ADR-0001's §4.5 marker carry dated notes for the sentences that said more than the code. The four scripts are green at 357 tests. The input was walked in the running app in SI and IP at tickets 02 and 03, with the console clean. Two things were seen and left: the gate converts a humidity-ratio bound at the session's pressure even while that pressure is out of range (ticket 04), and a pressure entered in inHg reads back in Pa at full precision after a unit switch, 109989.91 for 32.48 inHg (ticket 03). **Next: review item 4, Compare's `/grill-with-docs`.**
+
+> **2026-09-29 — position, Compare grilled**: item 4 of the review between Phase 4b and Phase 5 is done, ahead of the code (ADR-0002 decisions 50 to 53; `CONTEXT.md` gains **Compare**, and Slot, Entry mode and Session are revised). The deployed tool's Compare page was read at `e809c96` and its chart is what is ported: every compared slot draws its own comfort zones and its own marker, so **Compare has no baseline, no active slot and no difference highlighting**. Compare is a switch on the Standard page with a button per slot, three input columns of a third each, and Explore keeps drawing the bands of slot 1. An entry mode is the session's and converts every slot, which is what lets three columns share a row and leaves no slot to decide the chart's axes. Each slot has its own gate and its own last valid run; a model switch asks once, for the compared slots. The three rows `deferred.md` kept for this session are answered (`S055`, `S074`, `S036`), and so is the question Phase 4c's ticket 04 left: a bound that depends on the pressure is not taken while the pressure is out of range (decision 53). One thing is not known: three compared slots are three scans of the dynamic chart, about 270 ms for PMV (ASHRAE 55) if its measured 90.5 ms holds per slot, against decision 29's 300 ms line, so Compare's first ticket measures it. **Next: Compare's spec and tickets in `.scratch/compare/`, then Phase 5.**
+
+> **2026-09-30 — position, three slots' scans measured**: Compare's ticket 01 timed PMV (ASHRAE 55)'s dynamic chart for three compared slots in the browser (Chrome 154, Vite dev server, no throttling): **median 328.3 ms**, one slot 98.0 ms against Phase 4b's 90.5, PMV (ISO 7730)'s three 42.4 ms. The slots with a higher `met` and `clo` scanned slower, so the 270 ms estimate did not hold. Decision 29's 300 ms line is one scan, so it stands; decision 29 is amended to keep v1 synchronous whatever three slots cost, with no Worker, row-sliced scan or cache, since v1 puts a simpler app ahead of a faster one, and decision 50 is noted. **Next: Compare's tickets 02, 03 and 08.**
+
+> **2026-09-30 — position, Compare done**: Phase 5 items 1 and 2 landed on `rewrite/v1` (`.scratch/compare/`), a commit per ticket, two for 01 and 04: 01 `9936a0c` three slots' scans are measured (with `251da23`), 02 `bf85aec` the outputs are derived per slot, 03 `ab47b68` the chart's request lists its slots, 04 `f6b1e08` the Compare switch, the three columns and a row per compared slot (with `b33a8b2`, slot 1's button), 05 `c5578d2` both charts draw every compared slot's comfort zones and marker, 06 `4d98cc0` an entry mode converts every slot, 07 `76c92f8` a model switch asks once for every compared slot, 08 `43b9261` a humidity-ratio entry has no bound while the pressure is out of range. Ticket 09 read the documents against the code: decisions 50 to 53 and ADR-0001's §4.3, §4.4 and §4.5 markers carry dated notes. The four scripts are green at 438 tests. **Measured** (Chrome 154, Vite dev server): three slots' scans of PMV (ASHRAE 55)'s dynamic chart, median 328.3 ms, one 98.0 ms (ticket 01, no throttling); in the running app, an edit the three slots share redraws that chart in a median of 332.8 ms, an edit to one slot's clothing in 149.0 ms, and PMV (ISO 7730)'s three slots in 57.7 ms (ticket 05). The three models were walked end to end in the running app with Compare on (Chromium via Playwright, 1600×1000, Vite dev server), in SI and in IP, by mouse and by keyboard, reached by link, by the select, by typed address and by the back and forward buttons, with the console clean. Seen and left, with where each goes: the switch dialog's default width clips "Allowed range" once it has the slot column, the not-calculated note is a caption line and not text in its row, the swatch rule is written in two components' styles, slots 2 and 3's hues are placeholders, and how nine zones read on one chart is not judged (all Phase 5c); a scanned dynamic chart draws bands for one slot and comfort zones for two or more until the Standard / Explore split (Phase 5 item 3); whether a humidity entry mode says itself which bound it has (`BS04`, `.scratch/review-after-4b/deferred.md`, "Unscheduled"); what the checklist's human half found in the diff and where `CONTEXT.md` and the code's names differ (ticket 09's Comments, neither changed). **Next: the grilling of `.scratch/activity-adjusted-inputs/` 01 and 02, then Phase 5 item 3.**
+
+> **2026-09-30 — position, activity-adjusted inputs grilled**: `.scratch/activity-adjusted-inputs/` 01 and 02 are placed, ahead of the code (ADR-0002 decision 54; decision 48 revised, decision 51 amended; `CONTEXT.md`'s Slot, Session, Entry group and Entry mode revised and **Activity-adjusted input** added). The principle first: a slot holds what describes one air and one occupant, the session what makes three slots one table, and the test is whether two slots could differ on a thing with the page still one row, one chart and one table. Checked against every piece of state the code holds, only the entry modes disagreed three ways (decision 51's text, the code, ADR-0001 §4.8's example), settled as the slot keeping its entries with the session their only writer and the link writing them once. Both tickets are one concept: an input the library takes corrected for activity is an entry group with two entry modes, enter the uncorrected value or the corrected one. The deployed tool's "Include activity-generated air speed" is that second mode under the first's label (`e809c96`); its clothing correction is applied above 1.2 met where the app passes `clo` through, which pythermalcomfort's docstrings call for correcting first, and the clothing rule is the standard's, in a core table keyed by standard. The main repository lacks `clo_dynamic_ashrae` / `clo_dynamic_iso` (`cee6893`), so the library ticket comes first. Phase 5b item 2 was two formulas under one name: the deployed "Dynamic predictive clothing" button is `clo_tout`, and the item now says so. **Next: the spec and tickets in `.scratch/activity-adjusted-inputs/`, built as Phase 5 item 9 before items 3 and 4.**
+
+> **2026-10-01 — position, two decimals are the app's one precision**: `.scratch/activity-adjusted-inputs/` ticket 09 met one fact three times, the gate comparing exactly what a row shows at two decimals. ADR-0002 decision 55 (a slot holds the number its row shows) was taken for it and withdrawn the same day by decision 56, before its code landed (`.scratch/shown-precision/`, `wontfix`), because rounding at every write needed the display unit and the bound at each one. Decision 56 restores ADR-0001 §4.6: state is full-precision SI, and the one comparison, `isShownBeyond` beside the formatter, judges at two decimals in the quantity's SI display unit. It landed on `rewrite/v1` as `.scratch/one-precision/`, a commit per ticket: 01 `c59b51b` reverts the unit system `2e45c2b` put on every writer, 02 `36573db` the gate, the pressure's check and the violation rows judge at the shown precision and the range reads nearest, 03 `56bfbe2` a "Yes" lands on the bound's end itself, 04 `33c17d9` seven tests of a bound's end or a restoration assert at two decimals, 05 `2e78fa0` a range end steps one shown digit inward where typing it back would be stopped (`≤ 0.79` inHg for 2700 Pa), then `e45c686` and `fda8a9f`. Ticket 06 read the documents against the code: decision 56 carries a dated note, decision 55's five withdrawn notes name their commits, and the first Consequences bullet is amended. The four scripts are green at 644 tests. The page was walked in SI and IP with Compare off and on (a value at each range end, each entry-mode switch at the end, a "Yes" on ISO 7730's converted clothing end, a unit switch there and back), with the console clean. **Next: `.scratch/activity-adjusted-inputs/` ticket 05, that folder's close-out.**
+
+> **2026-10-01 — position, activity-adjusted inputs done**: Phase 5 item 9 landed on `rewrite/v1` (`.scratch/activity-adjusted-inputs/`), a commit per ticket, two for 04: 01 the library's `76a570d` (`clo_dynamic_ashrae`, `clo_dynamic_iso` and the added `clo_dynamic_iso_vr`), 02 `150fae9` the entry-group rules over one table, 03 `4610891` the air-speed group, 06 `6ea791b` the relative air speed's axis range, 07 `6267385` the air-speed switch back inverts, 04 `a0c7e16` + `edcf6f2` the clothing group, 08 `dcc2909` both inverses in `src/temporary-library/` and the clothing switch back inverts, 09 `60f088f` the converted bound; decisions 55 and 56 came out of 09 (the position above). Ticket 05 read the documents against the code: decisions 32, 48, 51 and 54 and ADR-0001's §4.1.5, §4.5 and §4.8 markers carry dated notes, and Phase 5b item 2 is noted for what a calculator writes under dynamic clothing entry. The four scripts are green at 644 tests. The four entry-mode controls were walked in the running app (Chromium 154 via Playwright, Vite dev server) in SI and IP, by mouse and keyboard, Compare off and on, reaching models by link, select, typed address and the back button, with the console clean. Seen and left: through Adaptive (ASHRAE 55), a dynamic clothing insulation that PMV (ISO 7730)'s rule gave comes back on PMV (ASHRAE 55) up to 0.001 clo higher (decision 54's note); what the checklist's human half and `CONTEXT.md` found is in ticket 05's Comments, none changed. **Next: Phase 5 item 3, the Explore threshold editor and the Standard / Explore split.**
+
+> **2026-10-01 — position, Phase 5 item 3 grilled**: the Explore page, the Bands panel and the Standard / Explore split
+> are placed, ahead of the code (ADR-0002 decisions 57 to 60; `CONTEXT.md` gains **Page**, **Band list**,
+> **Classifier**, **Palette** and **Scan**, and Session, Standard and Band are revised). A fact first: the deployed tool
+> has no Explore and no threshold editor, so the only reference is the `refactor-draft` prototype, and nothing in the
+> item is owed to parity. Explore is a page with its own address and the Session is created once for every page, so
+> Compare survives the way there and back; the page decides what every chart paints, and on Explore the psychrometric
+> chart becomes a scan; a Band list is one per model, the library's classifier plus colours, edited inline in a panel
+> named Bands; a classifier's palette is one colour family from a table keyed by the classifier object, ColorBrewer's
+> arrays copied in. The two "Unscheduled" rows of `.scratch/review-after-4b/deferred.md` are decided: `BS04` is done
+> as a ticket of its own first, the humidity axis stays `rh`. Time-series is in v1 with PHS and gets a phase later;
+> `core/page.ts` names it now. **Next: the spec and tickets in `.scratch/explore/`, then Phase 5 item 4.**
+
+> **2026-10-02 — position, Explore done and every scanned chart one scan**: Phase 5 items 3 and 8 landed on
+> `rewrite/v1`, as `.scratch/explore/` tickets 01 to 08 and `.scratch/one-scan/` tickets 01 to 04 (the commits are
+> under the two items). Explore is a page at `/explore/:model`, one session serves both pages, the navigation offers
+> the standards and Explore, Standard paints Comfort zones and Explore the model's Band list, edited in the Bands
+> panel, and a classifier's colours come from its own palette. Ticket 08's open point 1 became ADR-0002 decision 61:
+> every chart not declared polygons is one scan, contoured, the region above the saturation line covered, the scanned
+> output declared once on the model; the zone solver and the root finders are deleted, and acceptance criterion 3 is
+> two tests, 3a against the library and 3b against the deployed tool, whose bounds and measurements are in ADR-0001
+> §7's note. The full psychrometric scan of PMV (ASHRAE 55) is 50.5 ms for one slot and 234.2 ms for three
+> (Chromium 154), under decision 29's line. `.scratch/explore/` ticket 09 read the documents against the code:
+> decisions 7, 31, 53 and 57 to 61 carry notes of 2026-10-02, one Consequences bullet is amended, and ADR-0001's
+> §3, §4.0, §4.2, §4.3, §4.4, §4.5, §4.7, §5, §6 and §7 carry markers. The four scripts are green at 736 tests. What the
+> checklist's human half and `CONTEXT.md` found is in ticket 09's Comments, none changed but `CONTEXT.md`'s
+> Temporary library. **Next: a grilling of three chart changes.**
+
+> **2026-10-06 — position, three chart types**: the three chart changes the user brought on 2026-10-02 landed on
+> `rewrite/v1` as `.scratch/three-chart-types/` tickets 01 to 05 (ADR-0002 decision 62): 01 `fd36196` the adaptive
+> chart is its own chart type with its own builder, and a model without a dynamic chart holds no axes; 02 `ede7891`
+> Adaptive's declaration hands over each Comfort zone's two limit lines, both stroked and the closing sides not, and
+> `04d48f6` its readout names a zone on its outline; 03 `6f61623` a Comfort zone and a Band are a fill and a line,
+> made by one constructor; 04 `4f97433` the chart draws the spec's traces in their order across Plotly's trace types,
+> and `c1186a9` every chart is drawn in one order, the isolines cut only by an outline; 05 `17f3380` a Band is
+> outlined at its Edge, painted or not. A zone drawn as two contours costs about 2 to 3 ms of redraw, and Explore's
+> seven Edge lines about 3 to 6 ms (Chrome 154).
+> Ticket 06 read the documents against the code: decisions 27, 37, 38, 58, 61 and 62 carry notes of 2026-10-06,
+> ADR-0001 §4.4 and §5 carry markers, and the checklist's sanctioned exception names `limits`. The four scripts are green at
+> 781 tests. What the checklist's human half and `CONTEXT.md` found is in ticket 06's Comments, none changed but `CONTEXT.md`'s Band.
+> **Next: Phase 5 item 4, the share link.**
+
+> **2026-10-06 — position, Phase 5 item 4 grilled**: the share link, ahead of the code (ADR-0002 decision 63;
+> decisions 32, 49, 50, 57 and 59 amended; `CONTEXT.md` gains **Share link**, and Session says how long it lasts).
+> The item grew from one file to three things on one format. **The tab keeps its session**, in `sessionStorage`, so
+> a reload and an address typed into the tab keep everything, by the principle that an address reached by a document
+> load shows what the same address reached inside the app shows. **A share link carries what one page is computed
+> from**, not the session: the model, the compared slots, the chart type and axes, and the Band list on Explore
+> alone; its parameter is removed once read, and it replaces a session the tab already holds only on a yes. Both
+> are one text,
+> `v1.<Base64URL(JSON)>`, read by one decoder that refuses what it cannot read and starts what a text lacks at its
+> default, saying so (rule 6 as amended the same day). **Reset** is in the item: it asks,
+> clears the kept text and runs the first load again, so it has no list of its own. The format is frozen when the
+> app is deployed. Withdrawn on the way: the link naming no model, the parameter left in the address, the back
+> button reloading the link, a link replacing the tab's session unasked. **Next: the spec and tickets in `.scratch/share-link/`, then Phase 5 item 5.**
+
+> **2026-10-06 — position, the share link done**: Phase 5 item 4 landed on `rewrite/v1` as `.scratch/share-link/`
+> tickets 01 to 06: 01 `bdcc451` a session is built from a written session and reads itself out as one; 02 `d68d4e8`
+> the codec, then `cd3e560` and `12857d1` rule 6 as amended, a text filling what it lacks and saying so; 03 `a9daa48`
+> the tab keeps its session and a reload restores it; 04 `44e41e1` Reset asks, then runs the first load again;
+> 05 `788d03c` Copy link writes the page's narrowed session and a link opens it, with the notice line; 06 `fcb2ca8` a
+> link reaching a tab that holds a session asks first. Ticket 07 read the documents against the code: decisions 57
+> and 63 carry notes of 2026-10-06, ADR-0001 §4.8 and §5 carry markers, and Phase 6's `Save` / `Reload` sentence a
+> note. The four scripts are green at 852 tests. Tickets 03 to 06 were walked in Chrome: 03 on the dev server (a
+> reload, a typed address, a second tab, storage refused by a simulated getter, the back/forward cache), 04 to 06 on
+> the preview build (the address bar, the clipboard, Reset and a link's question both ways, a damaged link), with
+> the console clean; a link measured 663 to 971 characters.
+> What is open for the user, and what the checklist's human half and `CONTEXT.md` found, is in ticket 07's
+> Comments, none changed. **Next: Phase 5 item 5, the image export.**
+
+> **2026-10-07 — position, the image export done**: Phase 5 item 5 landed on `rewrite/v1` as `.scratch/image-export/`
+> tickets 01 to 06: 01 measured on plotly.js 4.0.0 and committed nothing; 02 `6e4f350` moved the conversion into
+> `ui/charts/plotlyFigure.ts`, with T14 as `3155c02`, `6be8ae4` and `6204915`; 03 `3e1623e` Export image downloads
+> the chart and its legend; 04 `e6cfb63` the dialog, the title, the two sizes and the two formats; 05 `b2143f9` the
+> Input summary; 06 `84d3ca3` the footer. Ticket 07 read the documents against the code: decision 64 carries a note
+> of 2026-10-07, ADR-0001 §2.1, §4.4, §5 and §7 carry notes, and Phase 5c item 2 a sentence on EPS and PDF. The four
+> scripts are green at 883 tests. Tickets 01 to 06 were walked in Chrome alone, with the console clean. What
+> is open for the user, and what the checklist's human half found, is in ticket 07's Comments, none changed.
+> **Next: Phase 5 item 7, the static notice for a browser without `Proxy`, the last of Phase 5's items.**
+
+> **2026-10-07 — position, the roadmap revised**: with Phase 5 at its last item, the order of what remains was read
+> against the documents and the code and changed in four places, each written where it belongs below. Phase 5c, the
+> interface designed, moves ahead of Phase 5b: its reason for waiting (Compare, Explore and the Bands panel change the
+> layout) is spent, and a feature built after the design system lands on tokens and primitives, where one built before
+> it is converted later. The UTCI acceptance runs twice, the first time when Phase 5 closes: the main repository already
+> ships UTCI in TypeScript with `UTCI_INFO` (`../jsthermalcomfort/src/models/utci.ts:106`, `standards: []`), so by
+> decision 13 UTCI is a v1 model today and the probe costs nothing. Time-series with PHS, in v1 by decision 57 and in no
+> phase, is Phase 5d, after 5b and before Phase 6, with its library port (the user, 2026-10-07: the calculators first,
+> Time-series is not urgent). And every step names its process: a grilling only where a decision is missing, a spec
+> only where tickets share a shape, a ticket always. **Next: Phase 5 item 7, then the first UTCI acceptance.**
+>
+> | # | Step | Process | After |
+> |---|---|---|---|
+> | 1 | Phase 5 item 7, the `Proxy`-less notice; Phase 5 closes | one ticket; decided 2026-09-04 | — |
+> | 2 | UTCI acceptance, first run (Phase 6 item 2) | one ticket holding the `git diff --stat`; no planning, as Phase 4's | 1 |
+> | 3 | Phase 5c, the interface designed | grilling (opening with the open points marked ★5c), spec, tickets; the system layer before the layout layer | 2 |
+> | 4 | Phase 5b, the input calculators | a short grilling (★5b), spec, tickets | 3 |
+> | 5 | The Time-series grilling (decision 57 rule 6) | the grilling itself | 4 |
+> | 6 | Library: PHS in TypeScript with `PHS_INFO`; `B12`, `D17`, `T22` | tickets in Phase 5d's folder | 5 |
+> | 7 | Phase 5d, Time-series with PHS | spec, tickets | 5, 6 |
+> | 8 | Phase 6: the UTCI acceptance's final run, gtag, the freeze test, the visual close-out, the merge | tickets as a checklist | 7 |
+
+> **2026-10-07 — position, Phase 5 closed**: item 7 landed on `rewrite/v1` as `.scratch/proxy-notice/` ticket 01
+> (`224ba0b`): a browser without `Proxy` sees a static notice in `index.html` naming Chrome 87, Firefox 83 and Safari 14,
+> and nothing in `src/` changed. Its verification is the repository's first Playwright test, three cases in Chromium.
+> The four scripts are green at 883 tests. Every item of Phase 5 is done, item 6 as far as decision 57 lands it (its
+> rest is Phase 5d), so **Phase 5 is closed. Next: step 2 of the
+> table above, the first run of the UTCI acceptance (Phase 6 item 2).**
+
+> **2026-10-07 — position, the first UTCI run done**: `.scratch/utci-acceptance/` ticket 01. Three preconditions
+> landed ahead, each its own commit with a pinning test: `7b7c55e` the `utci` quantity; `63a3b7b` `tr_minus_tdb`,
+> `UTCI_INFO`'s `derived` key, of a new kind `temperatureDifference` (°F without the 32 °F offset), which the ticket
+> had not foreseen; `5b2f152` UTCI's stress categories in the band palette, RdBu's ten, by decision 60 rule 4, which
+> the ticket had not foreseen either. Then `src/models/utci.ts` and one registry line, 2 files changed, 40 insertions,
+> 1 deletion, at 887 tests as at HEAD, and reverted. One `axisRanges` row restates a bound, so the run passes on its
+> two files but not on "no number of its own"; the details are under Phase 5's paragraph below. **Next: step 3 of
+> the table above, Phase 5c's grilling.**
+
+> **2026-10-08 — position, Phase 5c grilled**: ADR-0002 decisions 65 to 70 and their notes under decisions 49, 50, 51,
+> 59, 60, 62, 63 and 64; `CONTEXT.md` gains **Swatch** and **Session controls** and amends Entry mode and Palette; the
+> ★5c rows of `.scratch/open-points.md` are placed; the process is under Phase 5c below. Three things wait on the user
+> before the footer's ticket: the repository has no `LICENSE` file for the footer's MIT link; the Code link's target
+> (`package.json` has no `repository` field); the citation's text. **Next: the user's `/to-spec` and `/to-tickets` for
+> Phase 5c, the design plan in the spec.**
+>
+> **2026-10-09 — position, Phase 5c done**: the interface landed on `rewrite/v1` as `.scratch/interface-design/`, a
+> commit per ticket: 01 `04eb13d` the palette module and the tokens, 02 `826c4e8` the band families' reading rules, 03
+> `8711739` the semantic classes, the toggle groups and one dialog width, 14 `6a4fa23` Export image's toggle groups, 04
+> `a3cc0d1` the page frame, header and footer, 05 `96eb9f8` several slots' zones as outlines (decision 69, withdrawn
+> by 71), 15 `c262c1b` every slot's zones as nested fills, 16 `acebe5c` the outermost fill at 0.2, 06 `bd05cfc` the
+> left column, 07 `edb0282` the entry mode on its row, 17 `3448914` (with `b56fc24` and `704bdac`) the entry group's
+> menu button, 08 `b0db574` presets in the box and a constant input column, 09 `bcb1733` the result table, 10
+> `fe1a3f2` the chart area, 11 `ee83b47` the breakpoints, 12 `b373ccc` the lint rule. Ticket 13 read the documents
+> against the code: decisions 65 to 72 carry notes of 2026-10-09, ADR-0001 §5 and §7 carry notes, and the Done
+> criteria below are marked. The four scripts are green at 936 tests, and `npm run test:browser` at its five. Both
+> pages were walked at 1440, 1200 and 900 px, Standard with Compare off and on, with the console clean and no region
+> moved by Compare (ticket 13's Comments, screenshots `13-*.png`). Three things still wait on the user, the footer's
+> placeholders in `text/copy.ts`: a `LICENSE` file for the licence link, which points at the repository's root; the
+> Code link's target; the citation's text, the old frontend's. What the checklist's human half found, and what was
+> seen and left, is in ticket 13's Comments. **Next: step 4 of the table above, Phase 5b's short grilling (★5b).**
+>
+> **2026-10-09 — position, the shell grilled**: the Phase 5c page, judged by the user against shadcn-svelte's dashboard
+> and sidebar on the real pages, was reworked as a throwaway prototype on `prototype/shadcn-shell` (29 rounds, verdict
+> shell F, `.scratch/prototype-shadcn-shell/notes.md`; the branch is kept as a source, never merged), and the verdict
+> grilled into ADR-0002 decision 73 with notes under decisions 57, 65, 66, 67, 70 and 72, an ADR-0001 §2 note, and
+> `docs/design.md`, which now holds the look in the Phase 5c spec's place. The process is under Phase 5c below. **Next:
+> the user's `/to-spec` and `/to-tickets` for the shell, in a folder of its own, ahead of Phase 5b's grilling (step 4 of
+> the table above).**
+
 and the one rule is "**adding a model = one declaration file + one registry line, zero other files change**".
 
 The toolchain does not need to be rebuilt: the `refactor-draft` branch is already on the Vite 8 / TS 6 / Svelte 5.56 /
@@ -71,7 +237,7 @@ What is unmaintainable is `src/`, not `package.json`.
 | **§4.7 boundary root-finding + §5 `zoneBoundary.ts`** | **`charts.psychrometricZone` (ported from the CBE original, `rhStep`/`saturationStep`/`epsilon` configurable) + `bisect`/`secant`** |
 | §4.4 Adaptive real rendering | `charts.adaptiveAshraeZone` / `adaptiveEnZone` |
 | Model metadata (partial) | `pmv_ppd_iso.{label,description,tsv}`, `pmv_ppd_ashrae.{label,description,tsv,compliance,COMPLIANCE_LIMIT}`, `adaptive_*.{label,description,offsets}` |
-| Raw material for input calculators | `clo_dynamic_ashrae` / `clo_dynamic_iso`, `v_relative`, `running_mean_outdoor_temperature`, `met_typical_tasks`, `clo_individual_garments` |
+| Raw material for input calculators | `clo_dynamic_ashrae` / `clo_dynamic_iso`, `v_relative`, `running_mean_outdoor_temperature`, `met_typical_tasks`, `clo_individual_garments`. **Noted 2026-09-30** (ADR-0002 decision 54): the first two and `v_relative` are not calculator material but activity corrections derived under an entry mode, and the main repository has neither `clo_dynamic_*` |
 
 > **Do not write `zoneBoundary.ts` (ADR §5)** — the library already has it; just pass `rhStep: 5`.
 
@@ -377,7 +543,7 @@ All done criteria met (`npm test` 21 tests, `check` / `lint` / `build` clean; ve
 
 | Item | Decision / finding |
 |---|---|
-| v → vr | **`v_relative(v, met)` is applied** (`relativeAirSpeed: true` in `models/pmvIso.ts`), matching the deployed CBE tool. `comfort-tool-old` passed the entered value straight through; enter `v_relative(v, met)` there when comparing numbers |
+| v → vr | **`v_relative(v, met)` is applied** (`relativeAirSpeed: true` in `models/pmvIso.ts`), matching the deployed CBE tool. `comfort-tool-old` passed the entered value straight through; enter `v_relative(v, met)` there when comparing numbers. **Superseded 2026-09-28 (ADR-0002 decision 48):** the field left the declaration; `v_relative` is applied when the model info's inputs name `vr` |
 | Humidity | **RH only.** The library has no inverse conversions and no `hr` / `t_dp` / `t_wb` / `p_vap` quantities; `core/entryModes.ts` declares `humidityMode.rh` alone, `libraryInputs.ts` sets `rh` directly. The other four arrive with Phase 2b below |
 | Compliance colour | `category` is drawn as a swatch coloured by **band position** from `core/bandPalette.ts` (the seven CBE fills `#0571b0 #4c78a8 #92c5de #f2f2f2 #f4a582 #e15759 #cc79a7`); `intervals` colour pass / fail. No label-string comparison anywhere |
 | `limit_inputs` | Called with `false`: the app gates entered values against `model.limits` (red outline, no recompute, last valid result kept); the library then always returns numbers, as the deployed tool does |
@@ -386,7 +552,7 @@ All done criteria met (`npm test` 21 tests, `check` / `lint` / `build` clean; ve
 | Lint | `symbol:` properties are exempt from the wire-string rule (`met` / `clo` are unit symbols as well as keys); probe verified |
 | Deferred | `workspace.ts`, `chartType.ts`, `xxxFromId()` wait for their first consumer (Phase 3 / Phase 5 shareLink); `environment` parameter of `toLibraryInputs` arrives with the humidity-ratio conversion |
 | Library issue | `quantities.p_atm.siUnit` is `"kPa"` but `psy_ta_rh` and `psychrometricZone.p_atm` take Pa — resolve in the library before Phase 5 "Set pressure" (folded into Phase 2b) |
-| Open | `rh` has no applicability row, so 0..100 is not enforced. Decide with Phase 2b whether a physical range belongs on `Quantity` or in `core/units.ts` by kind |
+| Open, closed 2026-09-28 | `rh` has no applicability row, so 0..100 is not enforced. Decide with Phase 2b whether a physical range belongs on `Quantity` or in `core/units.ts` by kind. **Closed by ADR-0002 decision 46:** by kind, in `core/quantities.ts`'s `kindBounds` beside `QuantityKind`; the pre-call gate holds the humidity entry to it, converted into the entry's mode, wet bulb excepted |
 
 ---
 
@@ -572,6 +738,10 @@ Everything in `core/entryModes.ts`, `core/libraryInputs.ts`, `core/modelDeclarat
    display unit becomes kPa via `/1000`, because the library's `p_vap` / `p_atm` are in Pa while `core/units.ts`
    had been treating its kPa symbol as identity — harmless while nothing displayed a pressure.
    Design: `docs/specs/2026-09-08-humidity-entry-modes-design.md`.
+   **Decided 2026-09-28**: "Set pressure" and `environment` are Phase 4c; from then on these conversions read the
+   session's pressure instead of the library's default.
+   **Done 2026-09-29** (Phase 4c, `7239c30`): all five take the session's pressure; humidity ratio's pass it on as
+   `p_atm`, and the other four do not use it.
 3. `OptionSpec` / `OptionValue`, `RegisteredModel.options`, `InputSlot.options`. **Decided 2026-09-07: toggle only in
    v1.** The one consumer is Phase 3.7's ASHRAE `airspeed_control`; a `choice` kind waits for a second. The ISO
    **edition** the library gained on 2026-09-05 (`"7730-2005"` / `"7730-2025"`) is *not* an option: both editions run
@@ -592,6 +762,9 @@ Everything in `core/entryModes.ts`, `core/libraryInputs.ts`, `core/modelDeclarat
    `airspeed_control`, which is Phase 4b item 1; building the field before it would contradict the rule this plan applies
    everywhere else (a field waits for its first consumer). Toggle-only stands and is re-checked with the model on screen.
    This item is no longer a Phase 4 prerequisite.
+   **Corrected 2026-09-28 (review after Phase 4b, `P023`)**: the reason for 2005 above no longer holds. The library's kernel
+   now follows ISO 7730:2025 Annex D, and the library lists 2025 first, so the declaration pins `Standard.iso_7730_2025`
+   (Proposal 27; ADR-0002 decision 6 as amended) and the result table captions 2025.
 4. **The three kinds of applicability** (handed over by the library alignment). `pmv_ppd_iso.limits` now carries rows for
    the derived `p_vap ≤ 2700 Pa` and the output `pmv ∈ [−2, 2]` beside the entered quantities, and `outOfRangeInputs`
    walks entered quantities only, so both are silently ignored — the same hole the library just closed. They cannot
@@ -724,8 +897,14 @@ acceptance did not really pass.
 
 ## Phase 4b · PMV (ASHRAE 55) and Adaptive (ASHRAE 55) — when their `_INFO` lands upstream
 
-**Prerequisites**: `PMV_PPD_ASHRAE_INFO` (with the compliance interval) and `ADAPTIVE_ASHRAE_INFO` (with the `offsets` field of #184 §6)
-in the main repository. #203 item 3 schedules all-model metadata after #182; the app does not push on that (ADR-0002 decision 13).
+**Passed 2026-09-27 (`58ba1bb`, `c1ef5e1`) ✅ — acceptance: two files each, test count unchanged (205, 211); PMV (ASHRAE 55)'s scan median 90.5 ms.**
+
+**Prerequisites**: `PMV_PPD_ASHRAE_INFO` and `ADAPTIVE_ASHRAE_INFO` in the main repository. **Corrected 2026-09-27**: this
+line asked for the first "with the compliance interval" and the second "with the `offsets` field of #184 §6". Both shipped
+without them, and the app needs neither: the ±0.5 comfort zone is the library's `PMV_COMPLIANCE_INTERVAL_ASHRAE`
+(library `fcd877e`), and Adaptive's bands come from the model function `adaptive_ashrae` itself, evaluated by the
+temporary library's `adaptive_ashrae_zone`. Nothing goes upstream for either.
+#203 item 3 schedules all-model metadata after #182; the app does not push on that (ADR-0002 decision 13).
 Two app-side prerequisites, added 2026-09-22, because this is the phase where two models first share the Standard page:
 **the model-switch dialog** (ADR-0002 decision 32, moved here from Phase 5 item 2; `.scratch/model-switch/`), including
 the seeding of quantities the bag lacks — Adaptive's `t_running_mean` throws without it — and **the gate keeping the last
@@ -746,12 +925,19 @@ switching asks, the navigation links included); the gate as `6ad4caa`. This phas
    **Console logging (recorded 2026-09-15):** the migration dropped the fork's "writes nothing to the console" test, because the
    main repository's `cooling_effect` still logs "Assuming cooling effect = 0" per point and v1 calls no ASHRAE model. So
    `suppressWarnings` (Phase 3.7 item 4) must land upstream before the ASHRAE grid scan, and the silence test returns with it.
+   **Done 2026-09-27 (`58ba1bb`).** As shipped: the switch is `suppress_warnings` (library `76abdab`), and the silence
+   test is registry-wide (`acc6946`); the merge is in `core/applicability.ts` alone (`2ee5278`); the scan's median is
+   90.5 ms, so decision 29 stands.
 2. Adaptive (ASHRAE 55): `src/models/adaptiveAshrae.ts` + one registry line; locked axes `t_running_mean × operative_tmp`, exact
    band polygons from the adaptive bands in `src/temporary-library/`, `hasHumidityGroup` false because `rh` is not
    among its inputs. Same two-file rule as Phase 4. **The adaptive bands are ported here, not earlier** (ADR-0002 decision 9 as
    revised 2026-09-15): the migration ported only `psychrometricZone` and the root finders; the band geometry and the fork's
    adaptive `describe` blocks come with this model, reading labels and offsets from `ADAPTIVE_ASHRAE_INFO` rather than
    transcribing the fork's.
+   **Done 2026-09-27 (`c1ef5e1`, with `0f8032c`).** As shipped: the geometry is `adaptive_ashrae_zone` (`b97194e`), which
+   calls `adaptive_ashrae` at chosen points rather than reading offsets the Model info does not carry, and is tested
+   against the deployed chart's vertices rather than the fork's `describe` blocks; the chart is a polygons chart on
+   locked axes (decision 37), and the declaration gives ranges for those two axes only.
 
 ---
 
@@ -771,29 +957,118 @@ Four sessions, in this order, `/clear` between each:
    duplicated definitions, two names for one thing, and a rule kept in one feature and not another show up. Findings go to
    `.scratch/review-after-4b/issues/`, one verifiable change per ticket, `/implement` each. A docs-versus-code disagreement is
    not fixed in code: it becomes an ADR-0002 decision plus an ADR-0001 marker, as the model-switch close-out did.
+   **Done 2026-09-28** on `review/after-4b`: tickets 01 to 59, with the decisions in
+   `.scratch/review-after-4b/decisions.md` and what was left in `deferred.md`.
 2. **Architecture — `/improve-codebase-architecture`**, only after item 1's tickets are done, so that smells are not reported
    as structure. Scope given up front: the three declarations, `RegisteredModel`, Compare about to triple the slots. Pick
    zero to two; more than two means a rule was worked around during 4b, which is a 4b question, not a refactor. Each pick is
    an idea that enters the main flow at `/grill-with-docs`.
+   **Done 2026-09-29** on `review/architecture`, decided in `.scratch/review-after-4b/decisions.md` round 16: two picks. The
+   slot's shape (`.scratch/slot-shape/`, `5ddf4b3` to `12c7a1f`, ADR-0002 decision 47): the slot has its own module in
+   core, may hold no humidity, and is written only through core. Whether a model takes the relative air speed
+   (`.scratch/relative-air-speed/` 01, `4d7f74d`, decision 48): read from its model info. Three single-change tickets
+   landed beside them, `.scratch/review-after-4b/issues/` 60 to 62 (`7a05cd3` with `bb29d22`, `db01284`, `8560b49`).
+   The rest went elsewhere: entry modes carrying their own behaviour and the gate's wet-bulb check (`S018`'s temperature
+   half, `BS04`) to Phase 4c, and a required dynamic chart in the declaration's type (from `S007`) was left, with the
+   registry-wide test holding the rule.
 3. **Vocabulary — `/domain-modeling` on `CONTEXT.md`, optional.** 4b brings `airspeed_control`, `t_running_mean`, the 80 % / 90 %
    acceptability limits, and a second model called PMV with different bands; the question is whether any term is now doing
    two jobs. Item 2's grilling usually pulls this in on its own; run it alone only for a term already felt to be fuzzy.
-4. **Compare's `/grill-with-docs`** takes items 1–3's output as known input.
+   **Done 2026-09-29**, decided in `.scratch/review-after-4b/decisions.md` round 17. `CONTEXT.md` (`20132a8`): Entry
+   mode, Bound, Out of range and Violation are new, and Slot, Entry group, Applicability and Comfort zone are
+   rewritten. One term was doing two jobs: Applicability stood for the bound tested before the call and for what the
+   library reports after it. Three renames landed as tickets 01 to 03 of `.scratch/vocabulary/issues/`: the quantities
+   out of range are `outOfRangeQuantities` (`S083`, `317c9e1`), the bound beside an input is a bound (`S079`,
+   `7b835fd`), and a chart a declaration lists is a `DeclaredChart` (`S079`, `S106`, `7daa290`). `RegisteredModel` was
+   left.
+4. **Compare's `/grill-with-docs`** takes items 1–3's output as known input. **Not before Phase 4c is done** (added
+   2026-09-28): Compare is grilled against a `Session` that already holds `environment`.
+   **Phase 4c done 2026-09-29**: the session holds `atmosphericPressure`, with no `environment` around it (ADR-0002
+   decision 49).
+   **Done 2026-09-29**, ahead of the code: ADR-0002 decisions 50 to 53, and `CONTEXT.md`'s Compare. It answered the
+   three rows `deferred.md` kept for it and the question `.scratch/atmospheric-pressure/issues/04` left open. The
+   spec and the tickets go to `.scratch/compare/`.
+
+---
+
+## Phase 4c · Atmospheric pressure (added 2026-09-28)
+
+> **Grilled 2026-09-29** (`.scratch/atmospheric-pressure/spec.md`, ADR-0002 decision 49). The title lost "and
+> `environment`": the session holds `atmosphericPressure` directly. Both conflicts in item 1 are settled: atmospheric
+> pressure is session state and not a calculator, and it is held and shared in Pa. The three rows this phase took from
+> the review (`S018`'s temperature half, `BS04`, the gate's answer for a relative humidity that was not entered) are
+> left as they are (`.scratch/review-after-4b/decisions.md`, round 18). The text below is kept as written, except the
+> done criteria.
+>
+> **Done 2026-09-29**: `f34f05f`, `7239c30`, `00a81b8` and `39a748a` (tickets 01 to 04), then ticket 05's reading of
+> the documents against the code. The done criteria below hold, with two qualifications. The first holds for every
+> library call whose answer depends on the pressure: the dew-point, wet-bulb and vapour-pressure conversions call
+> `psy_ta_rh` without it (ADR-0002 decision 49, noted 2026-09-29). The second holds for the default slot at both ends
+> of the bound, not for every slot in range: the axis is scaled, not fitted. Saturated air at 30 °C, ISO 7730's upper
+> bound, is 102.5 g/kg at 30 000 Pa against an axis of 101.3, as saturated air at 40 °C, ASHRAE 55's, is 48.9 g/kg at
+> 101 325 Pa against 30 (`psy_ta_rh(tdb, 100, p).hr`). The input sits in the input panel's column of
+> `routes/StandardPage.svelte`, above the `InputPanel` component rather than inside it: it is the session's, not the
+> slot's.
+
+**Goal**: "Set pressure" and `Session.environment` (ADR §4.5): the session holds one atmospheric pressure, so that
+Phase 5's share link carries it (ADR §7.2).
+**Prerequisites**: items 1–3 of the review above. It runs before that review's item 4.
+
+**Why before Phase 5.** Compare multiplies the slots by three and the share link writes `Session`'s schema, so
+`environment` has to exist before either, or both are reopened to add it. Kept in v1 on 2026-09-28 (Proposal 28 as
+revised, in `.scratch/review-after-4b/decisions.md`): the v1 date no longer constrains scope.
+
+1. The feature is grilled and specced in its own `.scratch/` folder, which the user starts; this section places it, it
+   does not design it. The grilling starts from two conflicts it has to settle: ADR-0001 §4.1.5 (:181) lists "Set
+   pressure" among the input calculators that stay out of the session and the share link, against §4.5 and §7.2; and
+   §4.8's share-link example writes `p_atm` in kPa (`101.325`), where the library's `p_atm` is in Pa.
+2. The humidity entry modes' conversions (`core/entryModes.ts`) read the session's pressure where they leave `p_atm` at
+   the library's default today (Phase 3.6 item 2).
+
+**Done criteria**
+- `Session` holds one atmospheric pressure, and every library call that takes `p_atm` reads it: the humidity-ratio
+  entry mode's two conversions, the psychrometric chart's relative-humidity curves and marker, and the zone solver.
+  (Rewritten 2026-09-29: it named the entry modes only, which would leave the marker drawn at 101 325 Pa beside a
+  humidity ratio entered at another pressure.)
+- The psychrometric chart's humidity-ratio axis follows the pressure (ADR-0002 decision 45 as amended), so the
+  marker of a slot in range is on the chart at every pressure in range.
+- The pressure is entered in the input panel, outside every slot, in Pa or inHg; outside 30 000 to 110 000 Pa it is
+  marked and nothing is calculated.
+- No model's result changes with the pressure while the humidity is entered as relative humidity.
 
 ---
 
 ## Phase 5 · Compare / Explore / share and export
 
 **Goal**: close out the ADR §7 first-stage feature set.
-**Prerequisites**: Phase 4 passed, and the review between Phase 4b and Phase 5 above done.
+**Prerequisites**: Phase 4 passed, the review between Phase 4b and Phase 5 above done, and Phase 4c done.
 
-1. Compare with three slots + baseline: `ResultTable` has one row per slot, and the baseline determines what the difference highlighting is relative to;
-   slot colours run through the input panel, the table and the marker points on the chart.
+1. Compare with three slots (rewritten 2026-09-29, ADR-0002 decisions 50 to 52; it read "three slots + baseline",
+   with difference highlighting relative to the baseline): a Compare switch on the Standard page and a button per
+   slot, slot 1 always enabled; three input columns of a third each while Compare is on; `ResultTable` has one row per
+   compared slot; both charts draw every compared slot's comfort zones and marker at that slot's own values. A slot's
+   name and hue follow its position and run through the input columns, the table and the chart. No baseline, no
+   active slot, no difference highlighting. An entry mode is the session's and converts every slot. Each slot has its
+   own gate and last valid run. Explore has no Compare and draws the bands of slot 1.
+   **The first ticket measures three slots' scans of the dynamic chart** against decision 29's 300 ms line, before the
+   rest is built. **Measured 2026-09-29**: 328.3 ms for PMV (ASHRAE 55)'s three, 98.0 ms for one; decision 29's line
+   is one scan, so it stands, and v1 stays synchronous whatever three slots cost (decision 29 as amended).
+   With it (decision 53): while the atmospheric pressure is out of range, a humidity-ratio entry has no bound.
+   **Done 2026-09-30** (`.scratch/compare/` tickets 02 to 06 and 08: `bf85aec`, `ab47b68`, `f6b1e08`, `c5578d2`,
+   `4d98cc0`, `43b9261`). As built it differs from the text above in three places, each a dated note under its
+   decision: the charts draw every compared slot that has a last valid run; a scanned dynamic chart still draws the
+   bands while one slot is drawn, and comfort zones as contours for two or more, until item 3's split; and an
+   entry-mode change converts every slot that holds values, a slot never enabled holding none. Explore is item 3's.
 2. Cross-model switch dialog (ADR §4.5): parameters for the same quantity are kept, and the
    "Boundary Range Warning" only pops up when a value exceeds the new model's hard range (table Input / Current / Allowed range,
    buttons "Yes, switch and adjust" / "No, stay here"); no out-of-range, no dialog.
    **Moved 2026-09-22 to a Phase 4b prerequisite** (ADR-0002 decision 32, which also settles what "hard range" is and the
    order of the switch). What stays here is its extension to all three slots, with item 1's Compare. Its look is Phase 5c item 5.
+   **Settled 2026-09-29** (ADR-0002 decision 52): one dialog and one question. Its rows are the compared slots',
+   grouped by slot with the slot's name in a column of its own; a yes adjusts every listed value and a no leaves all
+   three slots untouched. A slot that is not compared is converted and seeded, not listed and not adjusted.
+   **Done 2026-09-30** (`.scratch/compare/` ticket 07, `76c92f8`). The slot's column appears while more than one
+   slot is compared; with one the dialog reads as before. The dialog's width with that column is Phase 5c item 5's.
 3. Explore threshold editor (rewritten 2026-09-21, ADR-0002 decision 31): a Band list is the library's `ClassifierBins`
    plus a colour per band — contiguous edges, the classifier's own `right` inclusivity, the library's edges kept exactly.
    The editor moves, adds and removes Edges (removing one merges two bands; a band with no colour leaves a range
@@ -803,21 +1078,181 @@ Four sessions, in this order, `/clear` between each:
    **The Standard / Explore split lands here**: Explore draws the bands, and Standard's dynamic chart switches to the
    comfort zone only, filled as the psychrometric chart fills it and blank outside, reading the one comfort-limit
    constant exported from `src/temporary-library/` beside the zone solver. **There is no "show zones" toggle.**
+   **Grilled 2026-10-01** (ADR-0002 decisions 57 to 60; decisions 8, 27, 31, 37, 51, 52 and 53 carry dated notes;
+   `CONTEXT.md` gains Page, Band list, Classifier, Palette and Scan). The deployed tool has no Explore and no
+   threshold editor (its `/ranges` page overlays one PMV ±0.5 zone per step of one varied input), so the only reference
+   is the `refactor-draft` prototype's `ChartBandEditor.svelte`, and decision 31's semantics win where they differ. As
+   decided: Explore is a page, `/explore/:model`, `core/page.ts` the closed set (Standard, Explore, Time-series), one
+   Session created in `App.svelte` for every page; navigation is a link per standard (opening its first model) and one
+   Explore link (keeping the model), with the model select listing the standard's models or, on Explore, every model.
+   Explore shows the session's controls, slot 1's panel without Compare, a one-row table, both charts and the **Bands**
+   panel (its on-screen name; "threshold editor" above is history). The page decides what every chart paints: Standard
+   paints Comfort zones (the dynamic chart for one slot too), Explore paints the model's one Band list on both charts,
+   the psychrometric chart becoming a scan over its temperature axis and the humidity ratio, unpainted above
+   saturation; the builders are given the list or not (`ChartRequest.bands`). The Band list is `core/bands.ts`'s,
+   held by `ChartState`, edited inline and at once (no Apply), Add splitting a band at its midpoint, Remove merging
+   upward, an Edge refused unless strictly between its neighbours, the last Edge editable. The palette is one colour
+   family per classifier from a table keyed by the classifier object, ColorBrewer's arrays copied, closing `P004` and
+   `.scratch/compliance-column/`. Explore's model switch lists slot 1 alone. Decided with it: `BS04` (the humidity mode
+   says its own bound, a ticket before this item's) and the humidity axis (stays `rh`, out of v1). Suggested order:
+   `BS04`; `core/page.ts`, the route, the session lifted, the navigation; Standard's one-slot zones; `core/bands.ts` and
+   the palette table; the Explore page; the Bands panel; the psychrometric scan; the docs close-out.
+   **Done 2026-10-02** (`.scratch/explore/` tickets 01 to 08: `d71f9a4`, `eb9ecd4`, `c6a38ae` + `e2877db` + `2ccbf7c`
+   + `5e33d7e`, `2a397c4`, `e39791a`, `47498cb`, `9f95582`, `92d5408`; then `.scratch/one-scan/` tickets 01 to 04,
+   ADR-0002 decision 61: `c5bcbf0` + `bbc7c08` + `21edd69` + `c6acfbc`, `d13fe36`, `76589c0`, `3e397c8`). Ticket 08
+   left the psychrometric Bands stopping under the saturation line at cell resolution while Standard's solved zones
+   met it, so decision 61 made every chart not declared polygons one scan, contoured, with a cover above saturation,
+   and deleted the zone solver and the root finders. As built it differs from the text above where decisions 57 to
+   61 carry a note of 2026-10-02: the session survives a page change made in the app, not a typed address; the
+   navigation's standards come from an app table, ASHRAE 55 then ISO 7730; Explore paints Bands on a chart the model
+   scans, and Adaptive's polygons stay Comfort zones there; the Bands panel sits under the legend, commits at every
+   keystroke, and refuses an Edge at full precision, not at the shown one; the first band's Add splits halfway to the
+   classifier's default Edge below; ISO's categories are coloured at four, "none" unpainted.
 4. `src/core/shareLink.ts`: `?share=v1.<Base64URL(JSON)>`, schema in ADR §4.8.
    **This is the only file in the whole project that reads and writes string ids** (`Quantity.key`, each closed set's `.id` / `xxxFromId()`).
    On a parse failure, fall back to defaults and notify; no blank screen.
+   **Added 2026-09-29** (ADR-0002 decision 49): the link carries the atmospheric pressure in Pa. A link without one
+   means 101 325 Pa; one whose pressure is out of range shows it as out of range and does not replace it.
    Skipped: `migrate()` (v1 has no source to migrate from; write it in v2) and `v1z.` deflate + `fflate`
    (together with Time-series, see below).
+   **Grilled 2026-10-06** (ADR-0002 decision 63; decisions 32, 49, 50, 57 and 59 carry notes of the same day;
+   `CONTEXT.md` gains Share link). The item is three things on one format. The session is written out as one text,
+   `v1.<Base64URL(JSON)>`, whose schema is decision 63's rule 1 and no longer ADR §4.8's example. The tab keeps the
+   whole session in `sessionStorage`, written at every change, so a reload and an address typed into the tab keep
+   it. A share link is the same text narrowed to what its page is computed from: the model, the compared slots, the
+   chart type and axes, and the Band list on Explore alone. A document load reads the link's parameter, else the
+   kept text, else the defaults, then follows the address; the parameter is removed once read. A text it
+   cannot read is refused: a link refused shows a notice and restores the kept session, or else the defaults.
+   Where it can, what a text lacks starts at its default and a key the app does not read is dropped, and a link
+   read so opens with a notice that says so; a kept text read so, with none (rule 6 as amended the same day). A link
+   opened in a tab that already holds a session asks before it replaces it, as Reset asks; a no drops the link. **Copy
+   link** (the "Export Link" of item 5 and of ADR §7) and **Reset** are buttons among the session's controls,
+   their look and place Phase 5c's; Reset asks first, then clears the kept text and runs the first address's load
+   again, staying on the page and the model. Withdrawn from the text above: "a link without one means 101 325 Pa"
+   (a text without a pressure is refused), and `xxxFromId()` (one private lookup in the file). The format is
+   frozen when the app is deployed. Suggested order: the session read out and built from a text, with the codec
+   and its registry-wide round trip; the kept session and the load order; the link, narrowed, with Copy link and
+   the notice; Reset; the docs close-out.
+   **Done 2026-10-06** (`.scratch/share-link/` tickets 01 to 06: `bdcc451`, `d68d4e8` + `cd3e560` + `12857d1`,
+   `a9daa48`, `44e41e1`, `788d03c`, `fcb2ca8`). As built it differs from the text above where decision 63 carries a
+   note of 2026-10-06: a chart entry may lack its Band list, as a Standard link writes it, and the session starts on
+   the classifier's; a link meets a question only where the tab's kept text can be read, and a filled link's notice
+   waits for the yes; Reset and a link's yes rebuild the pages by re-creating the router, with no reload; a reload
+   while a link's question stands drops the link unasked. A link is 663 to 971 characters as measured.
 5. Export Link + image export: editable title + input summary + tool name/version/date footer, PNG + SVG. The same
    `ChartSpec.legend` generates Plotly's horizontal bottom legend in the export layout, so screen and file agree — the
    modebar's own PNG button was removed in Phase 3 precisely because it could not do this.
+   **Revised 2026-10-06** (ADR-0002 decision 63): Export Link is item 4's Copy link button; this item is the image
+   export.
+   **Grilled 2026-10-07** (ADR-0002 decision 64; ADR-0001 §4.4 and §7 carry notes of the same day; `CONTEXT.md`
+   gains Image and Input summary). The deployed tool exports no image, so the reference is the prototype's
+   `plotlyExport.ts`, and what publishers ask of a figure. An image is a Plotly figure built for the file from the
+   page's `ChartSpec`, never the plot on screen: the same adapter without the hover grid, Plotly's own legend made
+   from `ChartSpec.legend`, the spec's axis ranges and not the viewport. From the top it holds the title, the
+   chart, the legend, the Input summary and the footer. The title starts as the model's name and the chart type's
+   and may be emptied; one choice leaves out the summary and the footer, for a figure that goes into a paper. The
+   Input summary says what the chart is computed from: the model and its standard, the pressure, the entry modes
+   and the options, then each drawn slot's last valid run as the panel's rows, stacked, with no result, and on
+   Explore the Band list's Edges. The footer is the tool's name, the app's and the library's versions and the date
+   of the export. **Added to the scope the same day**: two printed sizes, a single column of 90 mm and a double
+   column of 190 mm, 8 pt lettering at both, PNG at 600 dpi; no JPEG and no PDF. An **Export image** button by the
+   chart on Standard and Explore opens a dialog (title, size, format, the choice, Download) whose choices are kept
+   nowhere; the image is made at the click, by pure functions in core and one adapter in `ui/charts/`, and a
+   failure is a notice. Suggested order: the measurement (how the legend's height is had, what a hover grid
+   becomes in an SVG, the double column at 600 dpi); the adapter's conversion moved out of `PlotlyChart.svelte`,
+   with `.scratch/tidy-later.md`'s T14; the image's description and its figure; the Input summary; the dialog and
+   the download; the docs close-out.
+   **Revised 2026-10-07, at the spec** (decision 64's note of the same day; `.scratch/image-export/spec.md`): the
+   Input summary reads the runs alone. Above the slots it gives the model and its standard; each drawn slot's part
+   gives its run's rows, whose labels say the entry mode, its options and the pressure it ran at.
+   **Done 2026-10-07** (`.scratch/image-export/` tickets 02 to 06: `6e4f350` + `3155c02` + `6be8ae4` + `6204915`,
+   `3e1623e`, `e6cfb63`, `b2143f9`, `84d3ca3`). As built it differs from the text above where decision 64 carries
+   ticket 07's note of 2026-10-07: the title is lettered at 10 pt and the rest at 8 pt; the footer is two lines,
+   since as one it is cut off in a single column.
 6. `RegisteredModel.timeSeries` lands with `workspace.ts`, which is its first consumer.
+   **Revised 2026-10-01** (ADR-0002 decision 57): Time-series is in v1, with PHS, and is scheduled later as a phase of
+   its own. `core/page.ts` holds `page.timeSeries` from the start, and the field is optional, `timeSeries?: true`,
+   written by no registered model until PHS lands; nothing else of Time-series is built with Phase 5 item 3.
+   **Landed 2026-10-01** as far as decision 57 lands it: `page.timeSeries` (`core/page.ts:16`) and the optional field
+   (`core/modelDeclaration.ts:232`), written by no registered model. The rest is Phase 5d (added 2026-10-07).
 7. The `Proxy`-less fallback is a static notice in `index.html` naming the required browser versions (ADR §2 / §7.5,
    decided 2026-09-04). No second ES5 code path, no share decoding.
+   **Done 2026-10-07** (`.scratch/proxy-notice/` ticket 01, `224ba0b`): `index.html` holds the notice, hidden, and an
+   inline ES5 script that shows it when `typeof Proxy` is `"undefined"`; it names Chrome 87, Firefox 83 and Safari 14,
+   and `src/` is untouched. The repository's first Playwright test, `tests/browser/proxyNotice.behaviour.ts`, removes
+   `Proxy` before any page script runs and finds the notice shown and `#app` empty, with and without a share link, and
+   with `Proxy` finds the notice hidden and the app drawn; `playwright.config.ts` matches `*.behaviour.ts` beside
+   `*.visual.ts`. ADR-0001's four sentences on the summary page (§2's Links rationale, §4.8, §5's tree, §7's risk
+   table) carry notes of the same day.
+   **Revised 2026-10-07** (`.scratch/proxy-notice/` ticket 02, `c08739f`): the floor rose to Chrome 111, Firefox 115 and
+   Safari 16.4, which `vite.config.js` names as `build.target` and the notice names in its text. Chrome 87–109, Firefox 83–114
+   and Safari 14–15 have `Proxy` and got a blank page: sv-router calls `Array.prototype.toSorted` on every route match, Vite 8's default target
+   was already that baseline with Firefox 114, and the build carries class fields and private methods. The check also
+   shows the notice when `toSorted` is missing, and the browser test, renamed `tests/browser/browserNotice.behaviour.ts`,
+   removes it in two more cases. ADR-0001 §2's
+   Browsers row, §7 criterion 5 and the risk table carry notes of the same day.
+8. The psychrometric chart answers the pointer (added 2026-09-28) through a hover grid over its axes, as the polygons
+   chart has since `88f179d`. This is the probe layer ADR-0001 §4.4 deferred here on 2026-09-05. What the readout
+   reports is settled in this phase's grilling; the deployed tool's reports t, rh and hr. Where it sits is Phase 5c
+   item 6.
+   **Done 2026-10-02** with `.scratch/one-scan/` ticket 03 (`76589c0`, ADR-0002 decision 61 rule 4). The hover grid
+   both scanned charts share reads, on Standard, the temperature on the drawn axis, the humidity ratio and each drawn
+   slot's number labelled by slot, and "—" above the saturation line; on Explore it reads the same two axis values,
+   slot 1's number and its band. It reports no relative humidity. Where it sits is still Phase 5c item 6.
+9. Activity-adjusted inputs (added 2026-09-30, ADR-0002 decision 54; `.scratch/activity-adjusted-inputs/`). Air speed
+   and clothing are each an entry group with two entry modes: the first, the default, enters the uncorrected value
+   and the model gets the corrected one (`vr = v_relative(v, met)`; the dynamic clo by the model's standard's rule,
+   from a table in core keyed by standard); the second enters the corrected value. One control per group, the
+   session's, converting every slot; the link writes the four entry modes once (decision 51 as amended). Every
+   call takes the corrected value; switching into the corrected mode derives, switching back keeps the number; no
+   output row shows a derived value. **The library first** (decision 22): `clo_dynamic_ashrae` / `clo_dynamic_iso`
+   are ported into the main repository, which has neither. **Built before items 3 and 4**, so the link's schema is
+   written once.
+   **Done 2026-10-01** (`.scratch/activity-adjusted-inputs/` tickets 01 to 04 and 06 to 09: the library's `76a570d`,
+   then `150fae9`, `4610891`, `6ea791b`, `6267385`, `a0c7e16`, `edcf6f2`, `dcc2909`, `60f088f`). As built it differs
+   from the text above in four places, each written under decision 54, in its revisions of 2026-09-30 or its note of
+   2026-10-01: switching back inverts the correction in both groups, so the model is given the same value either
+   way, where the text says it keeps the number; the entry of the uncorrected mode is held to the model's bound
+   converted into it; PMV (ISO 7730) corrects the clothing at every metabolic rate, so its default PMV is −0.41
+   (walked, ticket 05's Comments); and the ISO correction is called at the relative air speed,
+   `clo_dynamic_iso_vr` (`core/clothingCorrection.ts:37`). The link's schema is item 4's.
 
-**Done criteria**
-- From any state, Export Link → open in a new tab → the state is identical (three slots, units, chart type, thresholds, numbers)
+**Done criteria** (the first revised 2026-10-06 and the next three added, ADR-0002 decision 63; the first read "Export
+Link → open in a new tab → the state is identical (three slots, whether Compare is on and which slots are enabled,
+units, chart type, thresholds, atmospheric pressure, numbers)")
+- From any state, Copy link → open in a new tab → the page shows what it showed: the model, the compared slots' numbers, the units, the atmospheric pressure, the chart type and axes and, on Explore, the Band list
+- From any state, a reload, or an address typed into the tab, keeps the whole session: three slots, whether Compare is on and which slots are enabled, every model's chart settings and Band list
+- Reset, confirmed, shows what a new tab at the same address shows, and a reload after it does too
+- A share link opened in a tab that holds a session asks first: a yes shows the link's page, a no keeps the session
+- Export image, at either size and in either format, gives a file whose chart and legend are the page's and whose input summary lists the values that chart is drawn from (added 2026-10-07, ADR-0002 decision 64)
 - Opening a share link in an environment with `Proxy` disabled does not crash
+
+**Added 2026-10-07, when Phase 5 closes**: the first run of the UTCI acceptance, Phase 6 item 2, before Phase 5b adds a
+field to the declaration; the second, final run stays in Phase 6, so the two runs bracket every change the declaration's
+shape takes after this phase. The main repository already ships UTCI in TypeScript with `UTCI_INFO`, `UTCI_LIMITS` and
+`UTCI_STRESS_CATEGORY_BINS` (`../jsthermalcomfort/src/models/utci.ts:66-111`, `standards: []`; `utci`, `UTCI_INFO` and
+`UTCI_STRESS_CATEGORY_BINS` exported from the root and pinned by the lock, `UTCI_LIMITS` deliberately not, as
+`HEAT_INDEX_ROTHFUSZ_LIMITS` is not; corrected 2026-10-07, it read "exported from the root"), so by decision 13 UTCI is
+in v1 today. No planning: as Phase 4's, the acceptance is executed directly and judged by `git diff --stat`, one ticket
+holding the record.
+**First run done 2026-10-07** (`.scratch/utci-acceptance/` ticket 01, whose Comments keep the declaration's text).
+Preconditions, each its own commit with a pinning test: `7b7c55e` the `utci` quantity; `63a3b7b` `tr_minus_tdb`, the
+`derived` key the drift test reads too, of a new kind `temperatureDifference`, so its violation row reads −54 – 126 °F
+in IP; `5b2f152` UTCI's stress categories in the band palette, which decision 60 rule 4 lands ahead as it lands a
+quantity. Then, after `git add -N`:
+
+```
+ src/models/index.ts |  3 ++-
+ src/models/utci.ts  | 38 ++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 40 insertions(+), 1 deletion(-)
+```
+
+887 tests as at HEAD, the four scripts green, UTCI in Explore's model select alone. Three findings, none fixed:
+the declaration writes `{ quantity: q.operative_tmp, min: -50, max: 50 }`, `tdb`'s bound restated, because
+`axisRangeFor`'s fallback reads `info.inputs` alone and under operative entry the `tdb` axis is `operative_tmp`; a
+follow-up lets the fallback answer it, so the final run drops the row. The declaration's constant `utci` collides with
+the library function's name and imports it as `utciFunction`. Its `inputs` defaults are numbers, as every
+declaration's are; `UTCI_INFO` publishes none.
 
 ---
 
@@ -825,14 +1260,37 @@ Four sessions, in this order, `/clear` between each:
 
 **Goal**: the calculator buttons of the old tool's input panel, with the semantics ADR §4.1.5 already fixed — a one-shot
 Apply that writes into a target input, never entering the session or the share link.
-**Prerequisites**: Phase 5 (they write into slots, and Compare decides which slot).
+**Prerequisites**: Phase 5 (they write into slots, and Compare decides which slot), and Phase 5c (revised 2026-10-07:
+the calculators' buttons and dialogs are built on the design system, so they are built once; the design reserves their
+place, which the deployed tool fixes).
+**Process (2026-10-07)**: a short grilling, opening with `.scratch/open-points.md`'s rows marked ★5b, then spec and
+tickets. Settled already: the one-shot Apply (ADR §4.1.5), the slot named at Apply (decision 50), and `D1` (a calculator
+writes in the session's clothing mode). Open: the declaration field below, `solar_gain`'s inputs, and the library work.
+A library function the app is about to call is ported to TypeScript first, with what the library's `CONTEXT.md` asks of
+it (`../jsthermalcomfort/CLAUDE.md:3`, "migrating to TypeScript one module at a time"; its JavaScript modules ship no
+`.d.ts`), so `clo_tout`, `solar_gain` and `clo_individual_garments` are ported ahead of their tickets, and `B13`'s two
+ensemble functions are written.
+**Noted 2026-09-29** (ADR-0002 decision 50): Compare has no active slot, so a calculator names the slot it writes
+into when it is applied.
 
 Scope was narrowed on 2026-09-04 to exactly three; `Globe temp` is explicitly out:
 
 1. **Custom clothing ensemble** — build a garment list from the library's `clo_individual_garments`, Apply writes `clo`.
-2. **Dynamic predictive clothing** — `clo_dynamic_ashrae` / `clo_dynamic_iso` (split 2026-09-05; the ISO one also takes `v` and `i_a`), Apply writes `clo`.
+2. **Predicted clothing from outdoor temperature** — `clo_tout`, the clo people wear at a given 6 a.m. outdoor
+   temperature; Apply writes `clo`. **Rewritten 2026-09-30** (ADR-0002 decision 54): it read "Dynamic predictive
+   clothing — `clo_dynamic_ashrae` / `clo_dynamic_iso` (split 2026-09-05; the ISO one also takes `v` and `i_a`),
+   Apply writes `clo`", the deployed button's name wired to the activity correction. The button is `clo_tout`
+   (`static/js/ASHRAE/ashrae.js:384-389` at `e809c96`). The activity correction is Phase 5 item 9's, not a
+   calculator: its input is its target.
+   **Noted 2026-10-01** (`.scratch/activity-adjusted-inputs/` ticket 05): what ticket 04 left for it is that `clo`
+   stays the entered clothing insulation, the one the presets hang off, and the dynamic value is a separate entry,
+   `clo_dynamic`. So "Apply writes `clo`" holds under clothing insulation entry. Under dynamic clothing entry the slot
+   holds no `clo` and the panel shows no clothing insulation row; whether the calculator is offered there, writes
+   the entry in the session's mode, or switches the mode first, is this item's to decide, and item 1's too.
 3. **Solar gain on occupants** — confirm first whether the fork already ports it; if not, that is a library task, since
    the formula is general (ADR §3).
+   **Confirmed 2026-10-07**: the main repository ships it as JavaScript, `src/models/solar_gain.js`, exported from the
+   root (`src/models/index.js:20`); its TypeScript port is the library work above.
 
 The declaration field that says which model offers which calculator is added here, not earlier: Phase 4's acceptance is
 already past, and an optional field with no consumer would be exactly the speculative abstraction the ADR forbids.
@@ -844,48 +1302,173 @@ already past, and an optional field with no consumer would be exactly the specul
 **Goal**: stop looking like a wireframe. Everything before this phase was correctness; this one is the product.
 **Prerequisites**: Phase 5. That is the point — Compare's three slots, the Explore workspace and the threshold editor
 all change the layout, so a design drawn before them would be redrawn after them.
+**Brought forward 2026-10-07**, ahead of Phase 5b and Phase 5d: the prerequisite is met at Phase 5's close, and the
+argument now runs the other way. Visual change reaches the app through tokens, primitives and the layout components
+(below), so a feature built after the design lands on them, and one built before it is converted later; the
+calculators' buttons and dialogs and the Time-series page are additions under the system, not changes to a drawn
+layout. The design reserves a place for the calculator buttons, which the deployed tool fixes, and for the Time-series
+link in the navigation (decision 57). It also gives a place and a look to what the decisions left to it: Copy link,
+Reset and Export image among the controls (decisions 63 and 64), the pressure input (decision 49), the Bands panel
+(decision 59's note) and item 6's readout.
+**Process (2026-10-07)**: a grilling first, as every phase's, opening with `.scratch/open-points.md`'s rows marked ★5c,
+then spec and tickets. Inside the phase the system layer first (item 3 the palette, item 2 the header and footer, item
+5 the dialog), which Phase 5b and Phase 5d consume, then the layout layer (items 1, 4 and 6), which touches the pages
+that exist. The phase stops at its Done criteria, not at taste.
+**Grilled 2026-10-08** (ADR-0002 decisions 65 to 70): appearance lives in tokens, primitives and layout components and a
+business component carries no `<style>` (65); one palette in `core/palette.ts`, with D15's reading rules and the slot hues
+(66); the page's header, left column of navigation and session controls, input column and result column, its footer,
+its breakpoints, one dialog width, the readout on the pointer and, revised the same day, layout stability: no control changes a region's width, Compare reflows inside a constant `24rem` input column, Presets and the calculators are a menu inside the box, the notice sits in the header (67); an entry mode chosen on the row it changes (68; its control reshaped the same day by 72, after ticket 07 landed: a menu button beside a plain label, named for the group, listing every mode with a description);
+several slots' Comfort zones as outlines, the phase's one `core/charts` change (69, withdrawn the same day by 71 after its ticket landed: nested fills however many slots, the outermost no fainter than 0.2); the result table's overflow rules
+(70). The design plan — principles, named palette, type roles, wireframes — goes into the spec, not here. Process, as
+agreed: the seven `<style>` blocks each go in the ticket that redesigns their component, not in one sweep; the lint rule
+that bans `<style>` outside `ui/primitives/` and `ui/layout/` is the last ticket, which proves the first Done criterion;
+the second is checked on each ticket's diff — no change under `src/state/`, under `src/core/` only `palette.ts`,
+`bandPalette.ts`, `slotBadge.ts`, decision 68's reader in `slot.ts` and decision 71's fill in `charts/specParts.ts`, and
+no test lost — and by a Chrome screenshot walk per ticket; no visual snapshot test (ADR-0001's Testing row). Of the ★5c
+rows: B4, B10 and D15 are the phase's; B6 is placed and reserved only, its dialog a ticket of its own after the phase
+(decision 59's note); B7 and B9 are triage tickets, B7 ahead of item 1; D11 is Phase 6's, the focus to land on the `h1`.
+**Noted 2026-10-09** (ticket 13): the second criterion's check is of source; three state tests changed their read of
+the slot's hue (`04eb13d`), and in `src/core/` `adaptiveChart.ts` changed its read of the hue and paints its zones
+through `zoneInkFor` (`96eb9f8`), `psychrometricChart.ts` changed a comment, and `slot.ts` gained
+`ValueEntryGroup.field` beside the reader. The written test cases went from 780 to 805, none lost.
 
 1. The three columns as designed rather than as stacked: real proportions, real density, a considered
    information hierarchy. The architecture is fixed (ADR §1), the execution is not.
+   **Added 2026-09-30** (`.scratch/compare/` ticket 09): Compare's three input columns and slot buttons, the hues
+   of slots 2 and 3, which are placeholders in `core/slotBadge.ts`, how nine comfort zones read on one chart
+   (decision 50 is what reopens if they do not), the not-calculated note, a caption line today, and the swatch rule
+   written in both `StandardPage.svelte` and `ResultTable.svelte`.
 2. Header and footer — title, unit switch, Documentation link, version / date / licence, Reset. **Moved here from
    Phase 6** on 2026-09-04: they are design work, not wrap-up chores.
+   **Added 2026-09-29** (ADR-0002 decision 49): Reset returns the atmospheric pressure to 101 325 Pa, and this phase
+   gives the pressure's input, which Phase 4c puts in the input panel outside every slot, its place and look.
+   **Revised 2026-10-06** (ADR-0002 decision 63): Reset is built in Phase 5 item 4, among the session's controls;
+   this phase gives it and Copy link their place and look.
+   **Added 2026-10-07** (ADR-0002 decision 64, rule 5; `.scratch/image-export/` ticket 07): the documentation the
+   link leads to says that Export image writes PNG and SVG alone, so a person asked for EPS or PDF converts the SVG
+   once, and that the SVG names Arial but does not embed it, which that conversion does. The app has no other place
+   a person would read it.
 3. One palette across UI and charts. `core/bandPalette.ts`'s `chartInk` is currently hand-picked hex against the CBE
    fills; it becomes part of the design system rather than a chart-local constant.
 4. Responsive behaviour, and the result table's horizontal overflow — legible since Phase 2, never designed.
 5. The model-switch dialog mock-up ADR §7.4 refers to. It is produced here; until then that criterion is judged on
    content, not appearance.
+   **Added 2026-09-30** (`.scratch/compare/` ticket 09): with the slot's column its default width clips "Allowed
+   range" behind a horizontal scrollbar; it is to be as wide with that column as without it (the user).
+6. Where the psychrometric chart's readout sits (added 2026-09-28): on the pointer, as the dynamic chart's does, or in
+   a box, as the deployed tool's. The readout itself is Phase 5 item 8. **Decided 2026-10-08** (ADR-0002 decision 67,
+   rule 5): on the pointer.
 
 **Why not earlier**: the lint rule that bans Tailwind utilities outside `ui/primitives/` and `ui/layout/` (ADR §2) is
 what makes deferring safe. Visual change reaches the app through tokens, primitives and the three layout components —
 business components never encode appearance, so redesigning them is not a rewrite of them.
+The same rule, read forward on 2026-10-07, is why the phase now comes before Phase 5b and Phase 5d: building on the
+finished system is cheaper than converting to it.
+
+**Done criteria** (met 2026-10-09, ticket 13)
+- [x] No hand-written CSS left in business components that a token or a primitive should be carrying. `b373ccc`
+  makes it a lint rule; a business component's one inline style is a data colour, `style:--swatch-color`.
+- [x] The four scripts still pass, and no business component's logic changed to accommodate the design. Read as the
+  check above, of `src/state/` and `src/core/`: the components themselves were recomposed, `InputPanel` taking a
+  column per slot and `QuantityInput` a row's entries (`b0db574`).
+
+**Landed sizes** (2026-10-09): every size as built, those the design plan named and those it left open; where one
+moved from the plan, the plan's is named beside it. columns `13rem | 24rem | 1fr` from 1280 px, `24rem
+| 1fr` from 1024 px, one column below; Compare's slot columns 106 px each, not the plan's `7.3rem`, the column's padding
+and gaps taken first; the chart `26rem`, and `65cqw` of the result column below 1024 px; every dialog `40rem`, less
+2rem margin on a narrower window; a dropdown menu as wide as its items, at most `24rem`; the header one row of 57 px
+from 1280 px, two rows of 92 px below, so a notice wraps without moving the page; the hover readout 12 px; type at
+the design plan's four sizes, line height 1.5.
+
+**The shell (grilled 2026-10-09, ADR-0002 decision 73)**: the landed page is rebuilt from the registry's parts, a frame
+from the `sidebar-16` block, three `Card` modules on a `ground`, bands of the one blue for header and footer, the plot
+at the exported image's 4:3 capped at `24rem` with the legend beside it, a sidebar menu without icons, and one spacing
+value for the page (`0.75rem`) with `0.25rem` inside a field; the look is `docs/design.md`. Process: the same as the
+phase's, a spec and tickets in a new folder; the prototype branch is the reference and nothing is cherry-picked, since
+every generated part is regenerated by the CLI on `rewrite/v1` and the use-site changes are ported by hand; a Chrome
+screenshot walk per ticket at 1440, 1366, 1280, 1024 and 768 px; the palette test gains `ground` and `--brand`'s new value; the one
+`core/charts` change is the relative-humidity labels' crowding at the `24rem` plot, a ticket of its own. Done when the
+four scripts and `npm run test:browser` pass, no change under `src/state/`, and under `src/core/` only `palette.ts` and
+the labels' ticket.
+
+---
+
+## Phase 5d · Time-series with PHS (added 2026-10-07)
+
+**Goal**: the Time-series page of ADR-0002 decision 57, with PHS as the first model that writes `timeSeries: true`.
+**Prerequisites**: Phase 5b. The user, 2026-10-07: the calculators come first, Time-series is not urgent. Phase 5c is
+behind it, so the page is built on the design system.
+**Process**: the grilling decision 57 rule 6 asks for (the page, its own session, the PHS declaration, what the share
+link's text carries for it, and whether `v1z.` deflate is needed, measured first on a link that holds a time series);
+then the library; then spec and tickets.
+
+1. Library side, first (decision 22): `phs` is 719 lines of JavaScript in the main repository (`src/models/phs.js`)
+   with no `_INFO`; it is ported to TypeScript with `PHS_INFO` and what the grilling finds the page needs of it. With
+   it the library's open rows, so the library is visited once: `B12` (`t_dp` / `t_wb` rounded, a parity gap), `D17`
+   (the `ClassifierBins` sentinel edge, `rh_from_dew_point`, `pmv_ppd_iso`'s JSDoc) and `T22` (`docs/` regenerated,
+   old prose, three spellings of 58.15). Tickets live in this phase's folder, as the activity-adjusted inputs' ticket
+   01 did.
+2. App side: the page, its session and the PHS declaration as the grilling decides them. The one rule holds: PHS
+   enters as one declaration file and one registry line, and a third file changed is an architecture fault to fix,
+   not to work around.
+3. The share link: what a Time-series page is computed from (decision 63 rule 1 extended), and `v1z.` only if the
+   measured link needs it (decision 63's note: `v1z.` waits for Time-series).
 
 **Done criteria**
-- No hand-written CSS left in business components that a token or a primitive should be carrying.
-- The four scripts still pass, and no business component's logic changed to accommodate the design.
+- PHS enters as one declaration file + one registry line, judged by `git diff --stat`.
+- A share link from a Time-series page opens it as it was shown, and a reload keeps it (Phase 5's criteria, on this page).
+- The four scripts pass.
 
 ---
 
 ## Phase 6 · UTCI acceptance + v1 wrap-up
 
 **Goal**: ADR §7 acceptance #1, then close out.
-**Prerequisites**: Phase 5.
+**Prerequisites**: Phase 5d (revised 2026-10-07; it read "Phase 5". The order after Phase 5 is the position note of
+2026-10-07 at the top).
 
-1. Library side: port `utci` from the JS on the `main` branch into the TS on `typescript`
-   (a polynomial, stateless, the cheapest one outside the 8 already-ported models), add `io.utci`, attach
-   `label` / `description` / `limits` / classification scale, and add the missing quantities to `quantities`.
+1. Library side: nothing (noted 2026-10-07; it read "port `utci` from the JS on the `main` branch into the TS on
+   `typescript`, add `io.utci`, attach `label` / `description` / `limits` / classification scale, and add the missing
+   quantities to `quantities`"). The main repository ships `utci` in TypeScript with `UTCI_INFO`, `UTCI_LIMITS` and
+   `UTCI_STRESS_CATEGORY_BINS` (`src/models/utci.ts:66-111`), pinned by the lock; the root exports all but
+   `UTCI_LIMITS`, which the declaration does not need (corrected 2026-10-07, it read "exported from the root").
 2. App side: **add only `src/models/utci.ts` + one registry line**, zero other files change, and it appears only in the
    Explore navigation (no `standard` attached in the library). `table` is required, so UTCI declares it too.
+   **Runs twice (2026-10-07)**: first when Phase 5 closes, on the declaration as it is then; finally here, after
+   Phases 5c, 5b and 5d changed what they changed. Both runs are judged by `git diff --stat`.
+   **First run done 2026-10-07**: `src/models/index.ts | 3 ++-`, `src/models/utci.ts | 38 +++…`, 2 files changed, 40
+   insertions, 1 deletion, after three preconditions (Phase 5's paragraph). The final run starts from the declaration
+   in `.scratch/utci-acceptance/` ticket 01's Comments.
 3. Run all nine ADR §7 acceptance items (item 3 compares vertex geometry).
 4. One line of gtag; send `page_view` manually on route change, with the query string stripped from `page_location`
    (do not send the share payload to Google).
-5. Merge back into `main`, remove the `git worktree`.
+5. Freeze the share format (ADR-0002 decision 63, rule 9; added 2026-10-06, `.scratch/share-link/` ticket 07): a test
+   decodes a text the deployed build wrote, kept as a fixture, so a renamed key or member fails it. Until then no
+   expected text is written as a literal.
+   **Order (2026-10-07)**: the fixture needs a deployed build's text and the merge is item 6, so a preview is deployed
+   before the freeze; the exact order is this phase's to settle.
+6. Merge back into `main`, remove the `git worktree`.
+7. Visual close-out (added 2026-10-07), before item 6: every page and dialog built after Phase 5c (the calculators,
+   Time-series) is read against Phase 5c's Done criteria. Not a second design: the criteria are the stop.
 
 The site shell (header, footer, Reset) was briefly assigned here on 2026-09-04 and moved to Phase 5c the same day:
 it is design work, and doing it apart from the design would mean doing it twice. `Save` / `Reload` are not built at
 all — Export Link covers them.
 
-**After v1**: local discomfort (ankle draft, vertical air temperature difference) as standalone models under the ASHRAE tab; the remaining 5 models (heat_index / humidex / wind_chill / PHS / adaptive_en,
-each = library port + one declaration file + one registry line) → Time-series + PHS + `v1z.` compression
+> **Noted 2026-10-06** (ADR-0002 decision 63; `.scratch/share-link/` ticket 07): Reset left the shell for Phase 5
+> item 4, where it is built beside Copy link; its look and place are still Phase 5c's. Export Link is that Copy link,
+> and the deployed tool's `Save` / `Reload`, which keep the inputs in `localStorage` across visits, are covered within
+> a tab by the session it keeps across a reload. Nothing is kept beyond the tab (decision 63's Rejected list:
+> `localStorage`), so `Save` / `Reload` stay unbuilt.
+
+> **Amended 2026-10-01** (ADR-0002 decision 57): Time-series with PHS is in v1 and will be given a phase of its own; the
+> line below keeps it as written, and the rest of the line stays after v1.
+> **Scheduled 2026-10-07** as Phase 5d; the line below is rewritten without Time-series and PHS, and `v1z.` goes to
+> Phase 5d's grilling (it read "the remaining 5 models (heat_index / humidex / wind_chill / PHS / adaptive_en, …) →
+> Time-series + PHS + `v1z.` compression → ES5 summary page …").
+
+**After v1**: local discomfort (ankle draft, vertical air temperature difference) as standalone models under the ASHRAE tab; the remaining models (heat_index / humidex / wind_chill / adaptive_en,
+each = library port + one declaration file + one registry line)
 → ES5 summary page (depends on the share schema being frozen, hence last) → UI/e2e/visual tests.
 
 ---
@@ -898,10 +1481,11 @@ each = library port + one declaration file + one registry line) → Time-series 
 - Tailwind utility classes are **allowed only** in `src/ui/primitives/` (generated by the shadcn CLI, not edited)
   and `src/ui/layout/` (`Stack`/`Grid`/`Inline`, gap via props); their appearance in any other directory is an error
 
-**Single entry points** (rewritten 2026-09-13, ADR-0002 decisions 2, 3, 12)
+**Single entry points** (rewritten 2026-09-13, ADR-0002 decisions 2, 3, 12; corrected 2026-09-28, review after Phase 4b, `P032`)
 - Everything comes from the `jsthermalcomfort` package root; there are no subpaths. The library's **model functions** are
-  imported only in `src/models/` (the declaration's `run`) and `src/workers/` (the actual call), enforced by
-  `no-restricted-imports` `importNames`; `_INFO`, `Standard`, `classifyFromBins` and the psychrometrics can be imported anywhere
+  imported only in `src/models/` (the declaration's `run`, called synchronously: v1 has no Worker, ADR-0002 decision 29)
+  and `src/temporary-library/` (library code, which calls a model as the library's own functions do, decision 24),
+  enforced by `no-restricted-imports` `importNames`; `_INFO`, `Standard`, `classifyFromBins` and the psychrometrics can be imported anywhere
 - `src/core/quantities.ts` is the single definition of quantities (`{ key, kind, label }`); `key` is the `_INFO` key
 - String ids appear in only two places: `Quantity.key` at the library boundary (a declaration's `run` naming each params
   key, which the compiler checks; `core/applicability.ts` indexing `_INFO`, `core/standard.ts` reading `Standard`'s keys), and `src/core/shareLink.ts`
@@ -915,10 +1499,11 @@ each = library port + one declaration file + one registry line) → Time-series 
 - Quantity names come only from `Quantity.label`; hard-coded names such as "Air temperature" do not appear in the app
 - Run generated `.svelte` files through `svelte-autofixer` (the Svelte MCP is installed)
 
-**Things not to write** (rewritten 2026-09-13, ADR-0002)
+**Things not to write** (rewritten 2026-09-13, ADR-0002; corrected 2026-09-28, review after Phase 4b, `P032`)
 Any transcribed applicability or classification number (they are read from `_INFO`), a root finder or zone solver written
-from scratch (`src/temporary-library/` is **ported from the fork**, tests included), a `Measure` / `Outcome` / `io` layer over the
-model's own result object, a hand-written name or route segment per standard (generated from `Standard`'s key), `defineModel`,
+outside `src/temporary-library/` (written to the library's conventions, ADR-0002 decision 24: the PMV zone solver and its
+root finders came from the fork, the solver with its tests, and Adaptive's band solver was written there, calling `adaptive_ashrae`),
+a `Measure` / `Outcome` / `io` layer over the model's own result object, a hand-written name or route segment per standard (generated from `Standard`'s key), `defineModel`,
 `InputCalculator`, `sequentialSimulation`, `evaluateMany`, `migrate()`, `fflate`; on the library side, `Unit` / `InputSpec` /
 `OptionSpec` / `ModelDefinition` / the `models` registry / a quantities table with labels (they belong to the app); on the app
 side, enum classes.
@@ -928,7 +1513,7 @@ side, enum classes.
 Run at the end of every Phase:
 
 ```bash
-npm run check && npm run lint && npm run build && npm test
+npm run check && npm run lint && npm run build && npm test && npm run test:browser
 ```
 
 Behaviour comparison (from Phase 3 on):
@@ -937,8 +1522,13 @@ Behaviour comparison (from Phase 3 on):
 cd ../comfort-tool-old && npm i && npm run dev   # the old tool runs on another port
 ```
 
-Compare item by item under the same inputs: result-table values, psychrometric chart comfort-zone vertices (≤ 0.01 °C),
-Adaptive band boundaries, SI/IP round trip.
+Compare item by item under the same inputs: result-table values, psychrometric chart comfort-zone vertices (per model:
+≤ 0.01 °C for PMV (ISO 7730), ≤ 0.02 °C for PMV (ASHRAE 55)), Adaptive band boundaries, SI/IP round trip. The ASHRAE 55
+bound is needed against the deployed tool's published vertices (`chart-online.json`), whose cooling effect is unrounded;
+the library rounds it to two decimals, as pythermalcomfort does, and so does the old tool's vendored copy. Over the
+fixture's four ASHRAE 55 zones the worst vertex is 0.0143 °C off, and the worst is 0.0093 °C with only that rounding
+removed (measured 2026-09-28; Proposal 35, `P031`).
 
-Phase 4's architecture acceptance is judged by `git diff --stat`, and so is Phase 6's UTCI acceptance.
+Phase 4's architecture acceptance is judged by `git diff --stat`, and so are the UTCI acceptance's two runs, at
+Phase 5's close and in Phase 6, and Phase 5d's PHS entry (2026-10-07).
 If either fails, stop and fix the architecture; do not work around it.

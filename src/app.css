@@ -3,32 +3,59 @@
 @import "shadcn-svelte/tailwind.css";
 @import "@fontsource-variable/geist";
 
-/* Project tokens. No dark mode in v1 (ADR §1), so there is one palette.
-   `--brand` is a placeholder until Phase 5c picks the colour; `--primary`
-   follows it, so buttons and the current navigation item change with it. */
+/* Project tokens. No dark mode in v1 (ADR §1), so there is one palette:
+   `core/palette.ts`'s colours, written here as the same hex values
+   (ADR-0002 decision 66), and `src/core/palette.test.ts` holds the two
+   files to one another. `--primary` and `--ring` follow `--brand`, so the
+   primary button and the focus ring are the brand's blue; the sidebar primitive's tokens are other tokens' values, so
+   it brings no colour of its own (ADR-0002 decision 73, rule 3). */
 :root {
-	--brand: oklch(0.205 0 0);
-	--font-size-caption: 0.75rem;
+	--brand: #003262;
+	--ground: #f8fafc;
 
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.145 0 0);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.145 0 0);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.145 0 0);
+	/* The page's two spacing values and the header's height (ADR-0002 decision 73, rule 2): one between modules and
+	   rows, at the page's edge and inside a card; one within a field, between its label, box and caption. */
+	--space-page: 0.75rem;
+	--space-field: 0.25rem;
+	--header-height: 3.5rem;
+
+	/* The type sizes (decision 73, rule 2), and the plot's height cap, which its 4:3 shape, the exported image's
+	   plot area, is derived from (rule 8). */
+	--font-size-title: 1.125rem;
+	--font-size-heading: 0.875rem;
+	--font-size-body: 0.875rem;
+	--font-size-caption: 0.75rem;
+	--chart-cap: 24rem;
+
+	--background: #ffffff;
+	--foreground: #0f172a;
+	--card: #ffffff;
+	--card-foreground: #0f172a;
+	--popover: #ffffff;
+	--popover-foreground: #0f172a;
 	--primary: var(--brand);
-	--primary-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.97 0 0);
-	--secondary-foreground: oklch(0.205 0 0);
-	--muted: oklch(0.97 0 0);
-	--muted-foreground: oklch(0.556 0 0);
-	--accent: oklch(0.97 0 0);
-	--accent-foreground: oklch(0.205 0 0);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.922 0 0);
-	--input: oklch(0.922 0 0);
-	--ring: oklch(0.708 0 0);
-	--radius: 0.625rem;
+	--primary-foreground: #ffffff;
+	--secondary: #e2e8f0;
+	--secondary-foreground: #0f172a;
+	--muted: #e2e8f0;
+	--muted-foreground: #64748b;
+	--accent: #e2e8f0;
+	--accent-foreground: #0f172a;
+	--destructive: #dc2626;
+	--border: #e2e8f0;
+	--input: #e2e8f0;
+	--ring: var(--brand);
+	/* The one radius (decision 73, rule 2); `@theme` derives Nova's smaller and larger steps from it. */
+	--radius: 0.375rem;
+
+	--sidebar: var(--background);
+	--sidebar-foreground: var(--foreground);
+	--sidebar-primary: var(--brand);
+	--sidebar-primary-foreground: var(--primary-foreground);
+	--sidebar-accent: var(--accent);
+	--sidebar-accent-foreground: var(--accent-foreground);
+	--sidebar-border: var(--border);
+	--sidebar-ring: var(--ring);
 }
 
 @theme inline {
@@ -55,16 +82,239 @@
 	--color-border: var(--border);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
+	--color-sidebar: var(--sidebar);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
 }
 
 @layer base {
 	* {
 		@apply border-border outline-ring/50;
 	}
+	/* The page stands on the ground; the modules, the cards, are the paper (decision 73, rule 4). */
 	body {
-		@apply bg-background text-foreground;
+		@apply text-foreground;
+		background-color: var(--ground);
+		font-size: var(--font-size-body);
+		line-height: 1.5;
 	}
 	html {
 		@apply font-sans;
 	}
+	/* The title, the page frame's `h1`, and a heading: a card's, set over the card title's own size, or the Bands
+	   panel's inside the chart card (the Phase 5c spec's type roles; decision 73, rule 2). */
+	h1 {
+		font-size: var(--font-size-title);
+		font-weight: 600;
+	}
+	h2,
+	h3 {
+		font-size: var(--font-size-heading);
+		font-weight: 600;
+	}
+	/* A link is the brand's (the design plan's principle 1). */
+	a {
+		color: var(--brand);
+	}
+	a:hover {
+		text-decoration: underline;
+	}
+}
+
+/* Semantic classes, named for what a thing is (ADR-0002 decision 65, rule 1). */
+@layer components {
+	/* A Swatch (CONTEXT.md) in its colour, `--swatch-color`, drawn in the shape the chart draws its thing. */
+	.swatch {
+		display: inline-block;
+		flex-shrink: 0;
+		width: 0.75em;
+		height: 0.75em;
+	}
+	/* A fill: bordered, so a near-white colour shows on the paper. */
+	.swatch-fill {
+		border: 1px solid var(--border);
+		background-color: var(--swatch-color);
+	}
+	.swatch-line {
+		height: 0;
+		border-top: 2px solid var(--swatch-color);
+	}
+	.swatch-marker {
+		border-radius: 50%;
+		background-color: var(--swatch-color);
+	}
+	/* A Swatch beside its label: the two never part. A long label wraps beside the swatch where its container lets
+	   text wrap (the not-calculated line), not in a table cell, which keeps its text on one line. */
+	.swatch-label {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.4em;
+	}
+
+	/* The chart card's plot and its legend (decision 73, rules 8 and 10). Every Layout's Sidebar: a row that wraps,
+	   the plot first at its full width, the legend in the room left beside it, or under it where that room is narrower
+	   than the legend's basis. The plot's width is its own, so a longer legend never moves it. */
+	.chart-area {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: var(--space-page);
+	}
+	/* The node Plotly draws the chart on: the exported image's 4:3 plot area, the cap tall, on the card's leading
+	   edge; it shrinks at 4:3 only where its column is narrower than it. */
+	.chart-plot {
+		flex: none;
+		inline-size: calc(var(--chart-cap) * 4 / 3);
+		max-inline-size: 100%;
+		aspect-ratio: 4 / 3;
+	}
+	/* The chart's one legend, a column beside the plot: `10rem` by preference, growing into a room of at most `18rem`,
+	   that room centred in what is left, and the entries as one column centred in it, each wrapping to lines rather
+	   than widening it. */
+	.chart-legend {
+		flex: 1 1 10rem;
+		max-inline-size: 18rem;
+		margin-inline: auto;
+		display: grid;
+		grid-template-columns: fit-content(100%);
+		justify-content: center;
+		gap: 0.25rem;
+		font-size: var(--font-size-caption);
+		color: var(--muted-foreground);
+	}
+
+	.caption {
+		font-size: var(--font-size-caption);
+		color: var(--muted-foreground);
+	}
+	/* A row's caption line under its box (decision 67, rule 3), the field's description: one line while empty too, so
+	   a preset's name appearing as a value is typed moves no row below. 1.5em for `1lh`, which Firefox 115 lacks. */
+	.caption-line {
+		min-height: 1.5em;
+	}
+	/* A value at the end of a list's item, a preset's in the box's unit. */
+	.item-value {
+		margin-left: auto;
+		color: var(--muted-foreground);
+	}
+
+	/* A table's scroll region (decision 70): the table scrolls here, not the page, and the clipped right edge is
+	   shaded while there is more. The shade stays at the region's edge (`scroll`); a cover in the paper's colour sits
+	   at the content's end (`local`) and hides it once scrolled there, or when nothing overflows. */
+	.table-scroll {
+		overflow-x: auto;
+		background:
+			linear-gradient(to left, var(--background) 50%, transparent) right / 3rem 100% no-repeat local,
+			linear-gradient(to left, color-mix(in oklab, var(--foreground) 20%, transparent), transparent) right / 1.5rem
+				100% no-repeat scroll;
+	}
+	/* A caveat in the Compliance column wraps, so a long warning does not widen the table (decision 70, rule 1). */
+	.result-table .caveat {
+		white-space: normal;
+	}
+	/* The first column, the slot's name, stays in view while the region scrolls (decision 70, rule 3), opaque so the
+	   columns under it do not show through: on the paper, or on the colour the row primitive's `hover:bg-muted/50`
+	   gives a hovered row, changing with the row's own `transition-colors` so the cell does not lead the row. */
+	.result-table tr > :first-child {
+		position: sticky;
+		left: 0;
+		background-color: var(--background);
+		transition: background-color var(--default-transition-duration) var(--default-transition-timing-function);
+	}
+	.result-table tr:hover > :first-child {
+		background-color: color-mix(in oklab, var(--muted) 50%, var(--background));
+	}
+	/* A row kept from an earlier run (`data-kept`) reads as not current by its numbers' muted ink, without a second
+	   hue; its first cell and the Compliance column keep theirs (decision 73, rule 9). */
+	.result-table tr[data-kept] .value {
+		color: var(--muted-foreground);
+	}
+}
+
+/* Adjustments to the generated primitives, selected by `data-slot` (ADR-0002 decision 65, rule 2, as decision 73
+   revised it). Sizes, layout, and which token a slot reads, such as a chosen toggle's `var(--primary)` or a field's
+   `var(--ground)`; never a literal colour. Unlayered, so it wins over the primitives' utilities. */
+/* A module, the generated card, has the one radius, where Nova rounds a card at the radius and 4 px, and the page's
+   spacing as its padding and its gap between header and content (decision 73, rules 2 and 4). */
+[data-slot="card"] {
+	--card-spacing: var(--space-page);
+	border-radius: var(--radius);
+}
+/* A quantity's row is the generated field (the shell's spec, "The rows"): its label, box and caption the field's spacing
+   apart, where Nova's are 8 px, and its description, the caption line, at the caption's size. */
+[data-slot="field"] {
+	gap: var(--space-field);
+}
+[data-slot="field-description"] {
+	font-size: var(--font-size-caption);
+}
+/* What one types into is tinted the ground, a box or the group a box stands in; what one chooses from, a select's
+   trigger or a colour input, is not (decision 73, rule 3). A box inside a group is transparent, so the group's tint
+   shows. */
+[data-slot="input"]:not([type="color"]),
+[data-slot="input-group"] {
+	background-color: var(--ground);
+}
+/* One pressed state (decision 73, rule 3): a chosen toggle-group item and a pressed toggle, Compare, a slot button or
+   a band's No colour, take the primary fill, where the generated toggle's pressed state is the hover's `bg-muted`. */
+[data-slot="toggle-group-item"][data-state="on"],
+[data-slot="toggle"][data-state="on"] {
+	border-color: var(--primary);
+	background-color: var(--primary);
+	color: var(--primary-foreground);
+}
+[data-slot="dialog-content"] {
+	/* Every dialog is one width (decision 67, rule 9); a narrower window keeps the primitive's margin. */
+	max-width: min(40rem, calc(100% - 2rem));
+}
+/* A sidebar menu item is a link drawn as a button: hovered, the primitive fills it, so the base rule's underline does
+   not reach it; a link in text keeps its underline (the shell's spec, "The frame"). */
+[data-slot="sidebar-menu-button"]:hover {
+	text-decoration: none;
+}
+/* A popover that holds a searchable list, a row's Presets: the list reaches the popover's edges. */
+[data-slot="popover-content"].list-popover {
+	padding: 0;
+}
+/* A menu is as wide as its items, not its button: an entry group's lists its modes' names and descriptions
+   (decision 72, rule 2), which wrap at 24rem. */
+[data-slot="dropdown-menu-content"] {
+	width: max-content;
+	max-width: min(24rem, calc(100vw - 2rem));
+}
+/* A table's scroll region is the wrapper that carries its attributes (decision 70, rule 2), so the primitive's
+   container lets the table overflow into it. */
+.table-scroll > [data-slot="table-container"] {
+	overflow-x: visible;
+}
+/* The result table's headings wrap, standing at the foot of their cell over the column they name; a result's
+   value, a number, Yes or No, or a dash, is right-aligned in tabular figures under its heading, so decimals line
+   up (decision 70, rule 1). Unlayered, as the heading's `text-left` and `whitespace-nowrap` are the primitive's. */
+.result-table [data-slot="table-head"] {
+	white-space: normal;
+	vertical-align: bottom;
+}
+.result-table .value {
+	text-align: right;
+	font-variant-numeric: tabular-nums;
+}
+/* The Bands panel is a compact table (decision 67, rule 4), now in the Bands dialog (decision 73, rule 8): a row as
+   tall as its small buttons, and a colour box narrow enough that No colour stands beside it. */
+.bands-table [data-slot="table-head"] {
+	height: 2rem;
+}
+.bands-table [data-slot="table-cell"] {
+	padding-block: 0.125rem;
+}
+.bands-table [data-slot="input"] {
+	height: 1.75rem;
+}
+.bands-table [data-slot="input"][type="color"] {
+	width: 2.5rem;
+	padding: 0.125rem;
 }

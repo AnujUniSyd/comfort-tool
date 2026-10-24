@@ -9,51 +9,14 @@
 </script>
 
 <!-- ADR §4.4: the whole chart has exactly one legend and it is always here,
-     below the chart. Plotly's own is off. -->
-<ul>
-  {#each entries as entry (entry.label)}
-    <li>
-      <span class="swatch {entry.swatch}" style:--swatch-color={entry.color}></span>
+     beside the plot, or under it where the room beside it is too narrow
+     (ADR-0002 decision 73, rules 8 and 10). Plotly's own is off. -->
+<ul class="chart-legend">
+  <!-- Keyed by the entry, not its label: an edited Band list may hold two bands of one label, or two unlabelled. -->
+  {#each entries as entry (entry)}
+    <li class="swatch-label">
+      <span class="swatch swatch-{entry.swatch}" style:--swatch-color={entry.color}></span>
       {entry.label}
     </li>
   {/each}
 </ul>
-
-<style>
-  ul {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 1rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    font-size: var(--font-size-caption);
-    color: var(--muted-foreground);
-  }
-
-  li {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4em;
-    white-space: nowrap;
-  }
-
-  .swatch {
-    display: inline-block;
-    width: 0.85em;
-    height: 0.85em;
-    background-color: var(--swatch-color);
-    border: 1px solid var(--border);
-  }
-
-  .swatch.line {
-    height: 0;
-    border: 0;
-    border-top: 2px solid var(--swatch-color);
-  }
-
-  .swatch.marker {
-    border-radius: 50%;
-    border-color: var(--swatch-color);
-  }
-</style>

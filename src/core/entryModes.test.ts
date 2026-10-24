@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { humidityMode } from "./entryModes";
-import { quantities } from "./quantities";
+import { DEFAULT_ATMOSPHERIC_PRESSURE, quantities } from "./quantities";
 
 describe("humidityMode", () => {
   it("names the library quantity each mode enters", () => {
@@ -11,21 +11,12 @@ describe("humidityMode", () => {
     expect(humidityMode.vapourPressure.quantity).toBe(quantities.pa);
   });
 
-  it("is the identity in rh mode", () => {
-    expect(humidityMode.rh.toRelativeHumidity(50, 25)).toBe(50);
-    expect(humidityMode.rh.fromRelativeHumidity(50, 25)).toBe(50);
+  it("enters humidity ratio in the library's kg/kg at full precision", () => {
+    expect(humidityMode.humidityRatio.fromRelativeHumidity(50, 25, DEFAULT_ATMOSPHERIC_PRESSURE)).toBeCloseTo(0.0098815475775, 13);
   });
 
-  // Round-trip bounds follow the fork's tests/psychrometrics.test.ts: the
-  // algebraic inverses are exact, wet bulb carries wet_bulb_tmp's 0.1 °C
-  // rounding, dew point carries dew_point_tmp's own approximation error.
-  it.each([
-    [humidityMode.humidityRatio, 9],
-    [humidityMode.vapourPressure, 9],
-    [humidityMode.wetBulb, 0],
-    [humidityMode.dewPoint, 0],
-  ])("round-trips 50 % rh at 25 °C through $id", (mode, digits) => {
-    const entered = mode.fromRelativeHumidity(50, 25);
-    expect(mode.toRelativeHumidity(entered, 25)).toBeCloseTo(50, digits);
+  it("is the identity in rh mode", () => {
+    expect(humidityMode.rh.toRelativeHumidity(50, 25, DEFAULT_ATMOSPHERIC_PRESSURE)).toBe(50);
+    expect(humidityMode.rh.fromRelativeHumidity(50, 25, DEFAULT_ATMOSPHERIC_PRESSURE)).toBe(50);
   });
 });

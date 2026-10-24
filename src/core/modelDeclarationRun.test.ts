@@ -1,9 +1,9 @@
 /**
  * What every registered declaration's `run` returns, in the two ways the
- * compiler cannot see: the bands it declares have to cut the scanned output
- * into the category the run itself returned (ADR-0002 decision 27), and its
- * numbers have to come back unrounded where the dynamic chart scans them
- * (decision 35). How it calls its library function is the sibling
+ * compiler cannot see: the bands a model's scan declares have to cut its
+ * output into the category the run itself returned (ADR-0002 decision 27), and
+ * the number in the table's first column has to come back unrounded (decisions
+ * 35 and 38). How it calls its library function is the sibling
  * `modelDeclarationCall.test.ts`'s.
  *
  * What a declaration says about itself — its library name, its standard, the
@@ -13,17 +13,20 @@ import { describe, expect, it } from "vitest";
 import { classifyFromBins, pmv_ppd_iso, type ClassifierBins } from "jsthermalcomfort";
 import { registeredModels } from "$lib/models";
 import { pmvPpdIso } from "$lib/models/pmvPpdIso";
-import { defaultSlot } from "./declarationTestSlots";
-import { optionsReader, resultValue, toLibraryInputs, withEnteredValues, type SlotInputs } from "./libraryInputs";
+import { chartType } from "./chartType";
 import {
+  adaptiveChartOf,
   dynamicChartOf,
   requireAxisRange,
-  type DynamicDeclaration,
+  type ChartAxes,
+  type DeclaredScan,
   type Range,
   type RegisteredModel,
   type Values,
 } from "./modelDeclaration";
-import { quantityFor, type Quantity } from "./quantities";
+import { resultValue, runOn } from "./modelRun";
+import { DEFAULT_ATMOSPHERIC_PRESSURE, quantities, quantityFor, type Quantity } from "./quantities";
+import { startingSlot, withEnteredValues, type Slot } from "./slot";
 
 /**
  * The classified output the declared bands cut, found by object identity:
@@ -41,21 +44,36 @@ function classifiedOutputOf(model: RegisteredModel, bins: ClassifierBins): Quant
 }
 
 /**
- * The chart's x axis, as both of the tests below walk it: the model's own
- * declared defaults, the extent the axis is drawn over, the slot at a position
- * along it, and the chart's scanned output there.
+ * The ISO declaration scanning nothing, its one chart the adaptive chart, as
+ * Adaptive's is: the model names no output and no bands, so only the table
+ * says which number `run` must return unrounded.
  */
-function alongTheXAxis(model: RegisteredModel, chart: DynamicDeclaration) {
-  const defaults = defaultSlot(model);
-  const axis = chart.axes.x;
+const isoWithAdaptiveChart = {
+  ...pmvPpdIso,
+  scan: undefined,
+  charts: [{ type: chartType.adaptive, axes: { x: quantities.tdb, y: quantities.v }, limits: () => [] }],
+} satisfies RegisteredModel;
+
+/** The axes of `model`'s chart that has some: its dynamic chart's, else its adaptive chart's. */
+function chartAxesOf(model: RegisteredModel): ChartAxes | undefined {
+  return (dynamicChartOf(model) ?? adaptiveChartOf(model))?.axes;
+}
+
+/**
+ * The chart's x axis, as both of the tests below walk it: the model's own
+ * declared defaults, the range the axis is drawn over, the slot at a position
+ * along it, and the run's value for a quantity there.
+ */
+function alongTheXAxis(model: RegisteredModel, axes: ChartAxes) {
+  const defaults = startingSlot(model);
+  const axis = axes.x;
   const at = (position: number) => withEnteredValues(defaults, new Map([[axis, position]]));
   return {
     defaults,
     range: requireAxisRange(model, axis),
     at,
-    outputAt: (position: number) => {
-      const slot = at(position);
-      return Number(resultValue(model.run(toLibraryInputs(slot, model), optionsReader(slot.options)), chart.output));
+    valueAt: (position: number, quantity: Quantity) => {
+      return resultValue(runOn(at(position), model, DEFAULT_ATMOSPHERIC_PRESSURE), quantity);
     },
   };
 }
@@ -84,23 +102,18 @@ function bracketAcross(outputAt: (position: number) => number, range: Range, edg
 }
 
 /**
- * The declaration's defaults, and inputs either side of every Edge the chart's
- * x axis can reach. Bands that are not the kernel's own disagree at both: at
+ * The declaration's defaults, and inputs either side of every Edge of the
+ * scan's bands the dynamic chart's x axis can reach. Bands that are not the kernel's own disagree at both: at
  * the defaults when they are the wrong bins altogether, and within a hair of
  * an Edge when only one cut is misplaced, which is why the rest of the probes
  * go there.
- *
- * It does not detect a `run` that rounds. The bisection runs on whatever `run`
- * returns, so a rounded output can move the bracket onto the rounding step
- * itself, where both ends agree — measured on Heat Index in ticket 06, where
- * the whole suite stayed green. "run's numbers" below tests that property
- * directly (ADR-0002 decision 35).
  */
-function driftProbes(model: RegisteredModel, chart: DynamicDeclaration): SlotInputs[] {
-  const { defaults, range, at, outputAt } = alongTheXAxis(model, chart);
+function driftProbes(model: RegisteredModel, axes: ChartAxes, scan: DeclaredScan): Slot[] {
+  const { defaults, range, at, valueAt } = alongTheXAxis(model, axes);
+  const outputAt = (position: number) => Number(valueAt(position, scan.output));
 
   const probes = [defaults];
-  for (const edge of chart.bands.edges) {
+  for (const edge of scan.classifier.edges) {
     const bracket = bracketAcross(outputAt, range, edge);
     if (bracket) {
       probes.push(at(bracket[0]), at(bracket[1]));
@@ -109,24 +122,41 @@ function driftProbes(model: RegisteredModel, chart: DynamicDeclaration): SlotInp
   return probes;
 }
 
-describe("the dynamic chart's declared bands", () => {
+/** Asserts that the scan's bands cut the run's output where the run itself does, at every probe. */
+function expectBandsToBinAsRunDoes(model: RegisteredModel): void {
+  const { scan } = model;
+  const chart = dynamicChartOf(model);
+  // A model that scans nothing declares no bands to check.
+  if (!scan || !chart) return;
+  const classified = classifiedOutputOf(model, scan.classifier);
+  const probes = driftProbes(model, chart.axes, scan);
+  // A model whose Edges the axis cannot reach would pass vacuously.
+  expect(probes.length, model.info.label).toBeGreaterThan(1);
+  for (const slot of probes) {
+    const result = runOn(slot, model, DEFAULT_ATMOSPHERIC_PRESSURE);
+    const value = resultValue(result, scan.output);
+    expect(typeof value, `${model.info.label} ${scan.output.label}`).toBe("number");
+    expect(classifyFromBins(Number(value), scan.classifier), `${model.info.label} at ${scan.output.label} ${String(value)}`).toBe(
+      resultValue(result, classified),
+    );
+  }
+}
+
+describe("the scan's declared bands", () => {
   it("bin the scanned output into the category the run itself returned, for every registered model", () => {
     for (const model of registeredModels) {
-      const chart = dynamicChartOf(model);
-      if (!chart) continue;
-      const classified = classifiedOutputOf(model, chart.bands);
-      const probes = driftProbes(model, chart);
-      // A model whose Edges the axis cannot reach would pass vacuously.
-      expect(probes.length, model.info.label).toBeGreaterThan(1);
-      for (const slot of probes) {
-        const result = model.run(toLibraryInputs(slot, model), optionsReader(slot.options));
-        const value = resultValue(result, chart.output);
-        expect(typeof value, `${model.info.label} ${chart.output.label}`).toBe("number");
-        expect(classifyFromBins(Number(value), chart.bands), `${model.info.label} at ${chart.output.label} ${String(value)}`).toBe(
-          resultValue(result, classified),
-        );
-      }
+      expectBandsToBinAsRunDoes(model);
     }
+  });
+
+  it("are not looked for on a model that scans nothing", () => {
+    const neverRun = {
+      ...isoWithAdaptiveChart,
+      run: () => {
+        throw new Error("a chart with no bands was probed");
+      },
+    } satisfies RegisteredModel;
+    expect(() => expectBandsToBinAsRunDoes(neverRun)).not.toThrow();
   });
 });
 
@@ -144,22 +174,33 @@ const ROUNDED_GRID_PER_UNIT = 100;
 const SAMPLES_ALONG_THE_AXIS = 25;
 
 /**
- * How many of the chart output's values, sampled along the chart's x axis,
- * carry more decimals than any rounding the library applies would leave. A
- * count over the whole sample rather than an assertion per value: an unrounded
- * kernel still returns a value on the grid now and then, and one such value
- * says nothing.
+ * How many of `quantity`'s values, sampled along the x axis `axes` has
+ * ({@link chartAxesOf}), carry more decimals than any rounding the library
+ * applies would leave. The first table column by default, because every model declares one, whatever
+ * its chart scans or draws, and what the table shows is what must be
+ * unrounded (ADR-0002 decision 38); the scan's output beside it, which every
+ * scanned chart contours (decision 61). A count over the whole sample rather
+ * than an assertion per value: an unrounded kernel still returns a value on
+ * the grid now and then, and one such value says nothing.
  */
-function unroundedSampleCount(model: RegisteredModel, chart: DynamicDeclaration): number {
-  const { range, outputAt } = alongTheXAxis(model, chart);
+function unroundedSampleCount(
+  model: RegisteredModel,
+  axes: ChartAxes,
+  quantity: Quantity | undefined = model.table[0],
+): number {
+  const { range, valueAt } = alongTheXAxis(model, axes);
+  if (!quantity) {
+    throw new Error(`${model.info.label} declares no table column`);
+  }
   // A kernel out of its domain returns NaN, which is off no grid and on every
   // one; left to the comparison below it would read as rounding. Heat Index
   // returns NaN below 27 °C unless the call turns `limit_inputs` off, so the
-  // next model would fail this test with the wrong reason printed.
+  // next model would fail this test with the wrong reason printed. A first
+  // column that is a category or a yes-or-no answer has no decimals to check.
   const finite = (position: number) => {
-    const value = outputAt(position);
-    if (!Number.isFinite(value)) {
-      throw new Error(`${model.info.label} returns ${String(value)} for ${chart.output.label} at ${chart.axes.x.label} ${position}`);
+    const value = valueAt(position, quantity);
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      throw new Error(`${model.info.label} returns ${String(value)} for ${quantity.label} at ${axes.x.label} ${position}`);
     }
     return value;
   };
@@ -202,30 +243,40 @@ function isoRounding(round_output: boolean) {
 }
 
 describe("run's numbers", () => {
-  it("come back unrounded where the dynamic chart scans them, for every registered model", () => {
+  it("come back unrounded in the table's first column and the scan's output, for every registered model", () => {
     for (const model of registeredModels) {
-      const chart = dynamicChartOf(model);
-      if (!chart) continue;
+      const axes = chartAxesOf(model);
+      if (!axes) continue;
       // The rounding switch is written by hand in each declaration's call,
       // under whatever name the library function gives it, so nothing but this
       // stops the next author from leaving it on (ADR-0002 decisions 18 and
       // 35). What it costs is silent: within half a rounding step of an Edge
       // the chart's band and the table's category disagree, and the dynamic
       // chart's surface becomes a staircase.
-      expect(unroundedSampleCount(model, chart), `${model.info.label} ${chart.output.label}`).toBeGreaterThan(0);
+      expect(unroundedSampleCount(model, axes), `${model.info.label} first table column`).toBeGreaterThan(0);
+      if (model.scan) {
+        expect(unroundedSampleCount(model, axes, model.scan.output), `${model.info.label} scan output`).toBeGreaterThan(0);
+      }
     }
   });
 
   it("are asserted by a test a rounding kernel fails", () => {
-    // Proven red 2026-09-22: `round_output: true` in the real ISO declaration
-    // made the registry test above fail. The drift test happens to fail
-    // with it, because ISO's Edges sit on the 0.01 grid `round_output` rounds
-    // to; on Heat Index, measured in ticket 06, it stays green. `driftProbes`
-    // bisects on whatever `run` returns, so a rounded output can simply move
-    // the bracket onto a rounding step where both ends agree.
+    // `round_output: true` in the real ISO declaration would fail the registry
+    // test above, as `isoRounding(true)`'s zero count shows here. The drift
+    // test would fail with it too, but only because ISO's Edges sit on the
+    // 0.01 grid `round_output` rounds to; on Heat Index it stays green
+    // (ADR-0002 decision 35). `driftProbes` bisects on whatever `run` returns,
+    // so a rounded output can simply move the bracket onto a rounding step
+    // where both ends agree.
     const chart = dynamicChartOf(pmvPpdIso);
     if (!chart) throw new Error("PMV (ISO 7730) declares a dynamic chart");
-    expect(unroundedSampleCount(isoRounding(true), chart)).toBe(0);
-    expect(unroundedSampleCount(isoRounding(false), chart)).toBeGreaterThan(0);
+    expect(unroundedSampleCount(isoRounding(true), chart.axes)).toBe(0);
+    expect(unroundedSampleCount(isoRounding(false), chart.axes)).toBeGreaterThan(0);
+  });
+
+  it("are asserted for a model whose chart is adaptive, which scans no output", () => {
+    const axes = chartAxesOf(isoWithAdaptiveChart);
+    if (!axes) throw new Error("the fixture declares an adaptive chart");
+    expect(unroundedSampleCount(isoWithAdaptiveChart, axes)).toBeGreaterThan(0);
   });
 });
