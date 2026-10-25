@@ -1,6 +1,8 @@
 {
   "source": "CenterForTheBuiltEnvironment/comfort_tool static/js/comfort-models.js comf.pmvEN",
   "commit": "e809c965dd6eb2e785bf4851de2149c7a1d3c299",
+  "generatedBy": "tests/parity/fixtures/a1-pmv-ppd-iso/generate-pmv-ppd-iso.cjs",
+  "note": "Inputs are as entered. comf.pmvEN applies the self-generated air-speed correction itself and does not correct the clothing insulation.",
   "cases": [
     {
       "inputs": {
@@ -59,8 +61,8 @@
         "met": 1,
         "clo": 0.5
       },
-      "pmv": 1.3304813266354172,
-      "ppd": 41.84644701043121
+      "pmv": 1.3304813266354214,
+      "ppd": 41.84644701043145
     },
     {
       "inputs": {
@@ -71,8 +73,8 @@
         "met": 1.1,
         "clo": 0.6
       },
-      "pmv": 0.5299943902911302,
-      "ppd": 10.876369636963958
+      "pmv": 0.5299943902911377,
+      "ppd": 10.876369636964128
     },
     {
       "inputs": {
@@ -95,8 +97,8 @@
         "met": 1,
         "clo": 1
       },
-      "pmv": -0.028394620593997773,
-      "ppd": 5.016690475120825
+      "pmv": -0.028394620593938106,
+      "ppd": 5.016690475120754
     },
     {
       "inputs": {
