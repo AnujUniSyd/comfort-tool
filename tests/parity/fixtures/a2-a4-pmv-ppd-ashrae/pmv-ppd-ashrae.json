@@ -1,0 +1,224 @@
+{
+  "source": "CenterForTheBuiltEnvironment/comfort_tool static/js/comfort-models.js comf.pmvElevatedAirspeed",
+  "commit": "e809c965dd6eb2e785bf4851de2149c7a1d3c299",
+  "generatedBy": "tests/parity/fixtures/a2-a4-pmv-ppd-ashrae/generate-pmv-ppd-ashrae.cjs",
+  "settings": {
+    "units": "SI",
+    "wme": 0,
+    "activityGeneratedAirSpeed": true,
+    "occupantAirSpeedControl": false
+  },
+  "note": "Entered v and clo. The pinned reference applies activity-generated relative air speed and dynamic clothing above 1.2 met internally. A2 uses entered v <= 0.1; the two met=1 cases also keep relative speed <= 0.1.",
+  "cases": [
+    {
+      "id": "A2-01",
+      "row": "A2",
+      "inputs": {
+        "tdb": 25,
+        "tr": 25,
+        "v": 0.1,
+        "rh": 50,
+        "met": 1.1,
+        "clo": 0.5
+      },
+      "pmv": -0.23643173159417621,
+      "ppd": 6.159970870103592
+    },
+    {
+      "id": "A2-02",
+      "row": "A2",
+      "inputs": {
+        "tdb": 20,
+        "tr": 20,
+        "v": 0.1,
+        "rh": 50,
+        "met": 1.1,
+        "clo": 0.5
+      },
+      "pmv": -1.9159528272892459,
+      "ppd": 72.8285842196988
+    },
+    {
+      "id": "A2-03",
+      "row": "A2",
+      "inputs": {
+        "tdb": 28,
+        "tr": 28,
+        "v": 0.1,
+        "rh": 50,
+        "met": 1.1,
+        "clo": 0.5
+      },
+      "pmv": 0.8014321725467083,
+      "ppd": 18.54191176958021
+    },
+    {
+      "id": "A2-04",
+      "row": "A2",
+      "inputs": {
+        "tdb": 25,
+        "tr": 25,
+        "v": 0.1,
+        "rh": 20,
+        "met": 1.1,
+        "clo": 0.5
+      },
+      "pmv": -0.4656131056372916,
+      "ppd": 9.526117530552312
+    },
+    {
+      "id": "A2-05",
+      "row": "A2",
+      "inputs": {
+        "tdb": 25,
+        "tr": 25,
+        "v": 0.1,
+        "rh": 80,
+        "met": 1.1,
+        "clo": 0.5
+      },
+      "pmv": -0.007250357551060414,
+      "ppd": 5.001088179925375
+    },
+    {
+      "id": "A2-06",
+      "row": "A2",
+      "inputs": {
+        "tdb": 25,
+        "tr": 30,
+        "v": 0.1,
+        "rh": 50,
+        "met": 1.1,
+        "clo": 0.5
+      },
+      "pmv": 0.5522533401283424,
+      "ppd": 11.384912034098136
+    },
+    {
+      "id": "A2-07",
+      "row": "A2",
+      "inputs": {
+        "tdb": 25,
+        "tr": 20,
+        "v": 0.1,
+        "rh": 50,
+        "met": 1.1,
+        "clo": 0.5
+      },
+      "pmv": -0.9869252613558243,
+      "ppd": 25.57238039329738
+    },
+    {
+      "id": "A2-08",
+      "row": "A2",
+      "inputs": {
+        "tdb": 21,
+        "tr": 21,
+        "v": 0.1,
+        "rh": 40,
+        "met": 1.1,
+        "clo": 1.5
+      },
+      "pmv": 0.1736655039848395,
+      "ppd": 5.625152447404787
+    },
+    {
+      "id": "A4-01",
+      "row": "A4",
+      "inputs": {
+        "tdb": 23,
+        "tr": 23,
+        "v": 0.15,
+        "rh": 50,
+        "met": 1.6,
+        "clo": 0.7
+      },
+      "pmv": -0.16163487161658072,
+      "ppd": 5.54144313051421
+    },
+    {
+      "id": "A4-02",
+      "row": "A4",
+      "inputs": {
+        "tdb": 22,
+        "tr": 22,
+        "v": 0.1,
+        "rh": 50,
+        "met": 2,
+        "clo": 0.7
+      },
+      "pmv": -0.1201885002100706,
+      "ppd": 5.2992168951416545
+    },
+    {
+      "id": "A3-01",
+      "row": "A3",
+      "inputs": {
+        "tdb": 29,
+        "tr": 29,
+        "v": 0.8,
+        "rh": 55,
+        "met": 1.1,
+        "clo": 0.8
+      },
+      "pmv": 0.6564821323802502,
+      "ppd": 14.052114679784708
+    },
+    {
+      "id": "A2-09",
+      "row": "A2",
+      "inputs": {
+        "tdb": 26,
+        "tr": 26,
+        "v": 0,
+        "rh": 50,
+        "met": 1.1,
+        "clo": 0.5
+      },
+      "pmv": 0.2545325438905969,
+      "ppd": 6.344879171623916
+    },
+    {
+      "id": "A2-10",
+      "row": "A2",
+      "inputs": {
+        "tdb": 25,
+        "tr": 25,
+        "v": 0.1,
+        "rh": 50,
+        "met": 1,
+        "clo": 0.5
+      },
+      "pmv": -0.40072961048593664,
+      "ppd": 8.345970269781972
+    },
+    {
+      "id": "A2-11",
+      "row": "A2",
+      "inputs": {
+        "tdb": 26,
+        "tr": 26,
+        "v": 0,
+        "rh": 50,
+        "met": 1,
+        "clo": 0.5
+      },
+      "pmv": 0.029122337508496833,
+      "ppd": 5.017556980913383
+    },
+    {
+      "id": "A3-02",
+      "row": "A3",
+      "inputs": {
+        "tdb": 27,
+        "tr": 27,
+        "v": 0.4,
+        "rh": 50,
+        "met": 1.1,
+        "clo": 0.8
+      },
+      "pmv": 0.33176680964389776,
+      "ppd": 7.289050266471051
+    }
+  ]
+}
