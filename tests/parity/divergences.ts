@@ -59,13 +59,17 @@ function coversCase(entry: Divergence, inputs: Readonly<Record<string, number>>)
 }
 
 /**
- * Both values as the app prints them, so a comparison is made at the
- * precision a person reads (ADR §4.6: at most two decimals). A string
- * comparison rather than an epsilon: the question is whether the two tools
- * show the same thing, not whether their internal doubles are close.
+ * Match the app's display rule (ADR §4.6): round to hundredths and normalize
+ * signed zero. Keep this black-box contract here rather than importing src/.
+ * There is no extra epsilon: crossing a displayed step is a difference.
  */
 function shown(value: number): string {
-  return value.toFixed(2);
+  const scaled = value * 100;
+  if (!Number.isFinite(value) || !Number.isFinite(scaled)) {
+    throw new Error(`Cannot compare a non-finite or unrepresentable parity value: ${value}`);
+  }
+  const rounded = Math.round(scaled) / 100;
+  return String(rounded === 0 ? 0 : rounded);
 }
 
 export interface ParityCheck {
